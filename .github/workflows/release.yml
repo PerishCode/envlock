@@ -37,6 +37,18 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Validate tag matches Cargo version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          crate_version="$(grep -m1 '^version\\s*=\\s*"' Cargo.toml | sed -E 's/version\\s*=\\s*"([^"]+)"/\\1/')"
+          expected_tag="v${crate_version}"
+          if [[ "${TAG}" != "${expected_tag}" ]]; then
+            echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
+            exit 1
+          fi
+
       - name: Test
         run: cargo test --locked
 

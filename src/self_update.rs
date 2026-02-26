@@ -1,5 +1,5 @@
 use std::io::{self, Cursor, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
@@ -237,8 +237,20 @@ fn replace_current_binary(new_binary: PathBuf) -> Result<()> {
 
 fn is_brew_managed_install() -> Result<bool> {
     let exe = std::env::current_exe().context("failed to resolve current executable")?;
-    let path = exe.to_string_lossy();
-    Ok(path.contains("/Cellar/") || path.contains("/Homebrew/Cellar/"))
+    if is_brew_cellar_path(&exe) {
+        return Ok(true);
+    }
+    if let Ok(canonical) = exe.canonicalize() {
+        if is_brew_cellar_path(&canonical) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn is_brew_cellar_path(path: &Path) -> bool {
+    let path_str = path.to_string_lossy();
+    path_str.contains("/Cellar/") || path_str.contains("/Homebrew/Cellar/")
 }
 
 fn current_target_triple() -> Result<&'static str> {
@@ -276,5 +288,16 @@ mod tests {
         let checksums = "def456 *envlock-v0.2.0-x86_64-unknown-linux-gnu.tar.gz\n";
         let v = parse_checksum(checksums, "envlock-v0.2.0-x86_64-unknown-linux-gnu.tar.gz");
         assert_eq!(v.as_deref(), Some("def456"));
+    }
+
+    #[test]
+    fn brew_path_detection_matches_cellar_paths() {
+        assert!(is_brew_cellar_path(Path::new(
+            "/opt/homebrew/Cellar/envlock/0.1.4/bin/envlock"
+        )));
+        assert!(is_brew_cellar_path(Path::new(
+            "/usr/local/Homebrew/Cellar/envlock/0.1.4/bin/envlock"
+        )));
+        assert!(!is_brew_cellar_path(Path::new("/usr/local/bin/envlock")));
     }
 }

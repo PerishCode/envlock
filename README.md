@@ -156,8 +156,13 @@ brew upgrade envlock
 Typical release steps:
 
 1. Merge to `main` after CI passes.
-2. Create and push tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-3. Wait for `Release` workflow to publish artifacts.
+2. Bump `Cargo.toml` version to `X.Y.Z` and commit.
+3. Create and push matching tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+4. Wait for `Release` workflow to publish artifacts.
+
+Release guardrails:
+
+- `release.yml` validates `github.ref_name == v$(Cargo.toml version)` and fails on mismatch.
 
 Required secret for tap sync:
 
