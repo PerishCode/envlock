@@ -162,7 +162,7 @@ jobs:
             --homepage "https://github.com/${REPO}"
 
           cd tap-repo
-          if git diff --quiet -- Formula; then
+          if [[ -z "$(git status --porcelain -- Formula)" ]]; then
             echo "no formula changes detected"
             exit 0
           fi
