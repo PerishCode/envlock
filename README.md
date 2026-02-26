@@ -2,9 +2,22 @@
 
 `envlock` reads a JSON profile and prepares environment variables for your shell or child command.
 
-## Quick Start
+## Install
 
-Run with sample profile:
+Install latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh
+```
+
+Install layout:
+
+- Binary: `~/.envlock/bin/envlock`
+- Symlink: `~/.local/bin/envlock`
+
+## Quick Start (Source)
+
+Run with sample profile from source:
 
 ```bash
 cargo run -- -p examples/envlock.sample.json
@@ -133,11 +146,17 @@ Upgrade without prompt:
 envlock self-update --yes
 ```
 
-If envlock is installed via Homebrew, use:
+Uninstall:
 
 ```bash
-brew upgrade envlock
+curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/uninstall.sh | sh
 ```
+
+## Docs
+
+Full documentation (VitePress + GitHub Pages):
+
+- https://perishcode.github.io/envlock/
 
 ## Release Process (Maintainers)
 
@@ -145,13 +164,11 @@ brew upgrade envlock
 - `Release` workflow (`.github/workflows/release.yml`) runs on tag push `v*`.
 - Multi-binary packaging is controlled by `TOOLS` in `release.yml`.
   Add another binary name to `TOOLS` to include it in release artifacts.
-- Homebrew tap target repository is configured by `HOMEBREW_TAP_REPO` in `release.yml`.
 - Release workflow builds archives for:
   - `x86_64-unknown-linux-gnu`
   - `x86_64-apple-darwin`
   - `aarch64-apple-darwin`
-- Artifacts, `checksums.txt`, and `dist/tap/*.env` metadata are published to GitHub Release.
-- If repository secret `HOMEBREW_TAP_TOKEN` is configured, release workflow also syncs formulas into the tap repository automatically.
+- Artifacts and `checksums.txt` are published to GitHub Release.
 
 Typical release steps:
 
@@ -163,26 +180,3 @@ Typical release steps:
 Release guardrails:
 
 - `release.yml` validates `github.ref_name == v$(Cargo.toml version)` and fails on mismatch.
-
-Required secret for tap sync:
-
-- `HOMEBREW_TAP_TOKEN`: Fine-grained PAT with `Contents: Read and Write` on `PerishCode/homebrew-tap`.
-
-## Tap Formula Script
-
-Use `scripts/update-tap-formula.sh` to generate/update a Homebrew formula in a tap repository:
-
-```bash
-scripts/update-tap-formula.sh \
-  --formula /path/to/homebrew-tap/Formula/envlock.rb \
-  --tool envlock \
-  --desc "Build environment sessions from JSON profile" \
-  --homepage "https://github.com/PerishCode/envlock" \
-  --version v0.1.0 \
-  --macos-arm-url "https://github.com/PerishCode/envlock/releases/download/v0.1.0/envlock-v0.1.0-aarch64-apple-darwin.tar.gz" \
-  --macos-arm-sha256 "<sha256>" \
-  --macos-amd-url "https://github.com/PerishCode/envlock/releases/download/v0.1.0/envlock-v0.1.0-x86_64-apple-darwin.tar.gz" \
-  --macos-amd-sha256 "<sha256>" \
-  --linux-amd-url "https://github.com/PerishCode/envlock/releases/download/v0.1.0/envlock-v0.1.0-x86_64-unknown-linux-gnu.tar.gz" \
-  --linux-amd-sha256 "<sha256>"
-```

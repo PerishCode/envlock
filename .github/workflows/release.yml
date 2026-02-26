@@ -10,7 +10,6 @@ permissions:
 
 env:
   TOOLS: "envlock"
-  HOMEBREW_TAP_REPO: "PerishCode/homebrew-tap"
 
 jobs:
   build:
@@ -109,9 +108,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout release repo for scripts
-        uses: actions/checkout@v4
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -123,80 +119,9 @@ jobs:
           find dist -name '*.txt' -type f ! -path 'dist/checksums.txt' -exec cat {} + > "${tmp_checksums}"
           sort -k2 "${tmp_checksums}" | uniq > dist/checksums.txt
 
-      - name: Prepare tap metadata
-        env:
-          VERSION: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist/tap
-          for tool in ${TOOLS}; do
-            linux_file="${tool}-${VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-            mac_amd_file="${tool}-${VERSION}-x86_64-apple-darwin.tar.gz"
-            mac_arm_file="${tool}-${VERSION}-aarch64-apple-darwin.tar.gz"
-
-            linux_sha="$(awk -v f="${linux_file}" '$2==f{print $1}' dist/checksums.txt)"
-            mac_amd_sha="$(awk -v f="${mac_amd_file}" '$2==f{print $1}' dist/checksums.txt)"
-            mac_arm_sha="$(awk -v f="${mac_arm_file}" '$2==f{print $1}' dist/checksums.txt)"
-
-            if [[ -z "${linux_sha}" || -z "${mac_amd_sha}" || -z "${mac_arm_sha}" ]]; then
-              echo "missing checksum entry for ${tool}" >&2
-              exit 1
-            fi
-
-            {
-              echo "TOOL=${tool}"
-              echo "VERSION=${VERSION}"
-              echo "MACOS_ARM_URL=https://github.com/${REPO}/releases/download/${VERSION}/${mac_arm_file}"
-              echo "MACOS_ARM_SHA256=${mac_arm_sha}"
-              echo "MACOS_AMD_URL=https://github.com/${REPO}/releases/download/${VERSION}/${mac_amd_file}"
-              echo "MACOS_AMD_SHA256=${mac_amd_sha}"
-              echo "LINUX_AMD_URL=https://github.com/${REPO}/releases/download/${VERSION}/${linux_file}"
-              echo "LINUX_AMD_SHA256=${linux_sha}"
-            } > "dist/tap/${tool}.env"
-          done
-
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/**/*.tar.gz
             dist/checksums.txt
-            dist/tap/*.env
-
-      - name: Detect tap token
-        id: tap_token
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          if [[ -n "${HOMEBREW_TAP_TOKEN}" ]]; then
-            echo "enabled=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "enabled=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Sync Homebrew tap
-        if: ${{ steps.tap_token.outputs.enabled == 'true' }}
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${HOMEBREW_TAP_REPO}.git" tap-repo
-          scripts/sync-homebrew-tap.sh \
-            --metadata-dir dist/tap \
-            --tap-dir tap-repo \
-            --homepage "https://github.com/${REPO}"
-
-          cd tap-repo
-          if [[ -z "$(git status --porcelain -- Formula)" ]]; then
-            echo "no formula changes detected"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula
-          git commit -m "chore: update homebrew formulas for ${VERSION}"
-          git push origin HEAD

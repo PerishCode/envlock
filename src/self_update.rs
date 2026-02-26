@@ -1,5 +1,5 @@
 use std::io::{self, Cursor, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
@@ -34,10 +34,6 @@ struct ReleaseAsset {
 }
 
 pub fn run(options: SelfUpdateOptions) -> Result<()> {
-    if is_brew_managed_install()? {
-        bail!("envlock is Homebrew-managed. Please use: brew upgrade envlock");
-    }
-
     let client = http_client()?;
     let release = fetch_release(&client, options.version.as_deref())?;
     let current = current_version()?;
@@ -53,12 +49,18 @@ pub fn run(options: SelfUpdateOptions) -> Result<()> {
 
     if options.check_only {
         println!("Update available: v{} -> {}", current, release.tag_name);
+        if let Err(err) = resolve_update_target_path() {
+            eprintln!("note: {}", err);
+        }
         return Ok(());
     }
 
     if !options.yes {
         prompt_for_confirmation(&current, &release.tag_name)?;
     }
+
+    let target_binary =
+        resolve_update_target_path().context("unable to resolve managed install target")?;
 
     let target_triple = current_target_triple()?;
     let archive_name = format!("envlock-{}-{target_triple}.tar.gz", release.tag_name);
@@ -84,7 +86,7 @@ pub fn run(options: SelfUpdateOptions) -> Result<()> {
 
     let temp_dir = TempDir::new().context("failed to create temp directory")?;
     let extracted_binary = extract_binary(&archive_bytes, temp_dir.path())?;
-    replace_current_binary(extracted_binary)?;
+    replace_binary_at_path(extracted_binary, &target_binary)?;
 
     println!("Updated envlock to {}", release.tag_name);
     Ok(())
@@ -207,9 +209,16 @@ fn extract_binary(archive_bytes: &[u8], temp_root: &std::path::Path) -> Result<P
     bail!("envlock binary not found in release archive")
 }
 
-fn replace_current_binary(new_binary: PathBuf) -> Result<()> {
-    let current = std::env::current_exe().context("failed to resolve current executable")?;
-    let parent = current
+fn replace_binary_at_path(new_binary: PathBuf, target: &PathBuf) -> Result<()> {
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!(
+                "failed to create target directory for update: {}",
+                parent.display()
+            )
+        })?;
+    }
+    let parent = target
         .parent()
         .context("failed to resolve executable parent directory")?;
 
@@ -226,31 +235,45 @@ fn replace_current_binary(new_binary: PathBuf) -> Result<()> {
 
     let backup = parent.join(format!(".envlock.old.{}", std::process::id()));
 
-    std::fs::rename(&current, &backup).context("failed to rotate current binary")?;
-    if let Err(err) = std::fs::rename(&staged, &current) {
-        let _ = std::fs::rename(&backup, &current);
-        bail!("failed to install updated binary: {}", err);
+    if target.exists() {
+        std::fs::rename(target, &backup).context("failed to rotate current binary")?;
+        if let Err(err) = std::fs::rename(&staged, target) {
+            let _ = std::fs::rename(&backup, target);
+            bail!("failed to install updated binary: {}", err);
+        }
+        let _ = std::fs::remove_file(&backup);
+    } else {
+        std::fs::rename(&staged, target).context("failed to install updated binary")?;
     }
-    let _ = std::fs::remove_file(&backup);
     Ok(())
 }
 
-fn is_brew_managed_install() -> Result<bool> {
+fn resolve_update_target_path() -> Result<PathBuf> {
+    let managed = managed_install_binary_path()?;
     let exe = std::env::current_exe().context("failed to resolve current executable")?;
-    if is_brew_cellar_path(&exe) {
-        return Ok(true);
+    if exe == managed {
+        return Ok(managed);
     }
-    if let Ok(canonical) = exe.canonicalize() {
-        if is_brew_cellar_path(&canonical) {
-            return Ok(true);
-        }
+    let canonical = exe
+        .canonicalize()
+        .with_context(|| format!("failed to resolve executable realpath: {}", exe.display()))?;
+    if canonical == managed {
+        return Ok(managed);
     }
-    Ok(false)
+
+    bail!(
+        "self-update only supports installs under {}. Reinstall via scripts/install.sh",
+        managed.display()
+    )
 }
 
-fn is_brew_cellar_path(path: &Path) -> bool {
-    let path_str = path.to_string_lossy();
-    path_str.contains("/Cellar/") || path_str.contains("/Homebrew/Cellar/")
+fn managed_install_binary_path() -> Result<PathBuf> {
+    managed_install_binary_path_with_home(std::env::var_os("HOME").map(PathBuf::from))
+}
+
+fn managed_install_binary_path_with_home(home: Option<PathBuf>) -> Result<PathBuf> {
+    let home = home.context("HOME is not set; unable to resolve managed install path")?;
+    Ok(home.join(".envlock/bin/envlock"))
 }
 
 fn current_target_triple() -> Result<&'static str> {
@@ -291,13 +314,12 @@ mod tests {
     }
 
     #[test]
-    fn brew_path_detection_matches_cellar_paths() {
-        assert!(is_brew_cellar_path(Path::new(
-            "/opt/homebrew/Cellar/envlock/0.1.4/bin/envlock"
-        )));
-        assert!(is_brew_cellar_path(Path::new(
-            "/usr/local/Homebrew/Cellar/envlock/0.1.4/bin/envlock"
-        )));
-        assert!(!is_brew_cellar_path(Path::new("/usr/local/bin/envlock")));
+    fn managed_install_path_is_home_scoped() {
+        let path = managed_install_binary_path_with_home(Some(PathBuf::from("/tmp/envlock-home")))
+            .expect("managed path should build");
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/envlock-home/.envlock/bin/envlock")
+        );
     }
 }
