@@ -42,7 +42,23 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          crate_version="$(grep -m1 '^version\\s*=\\s*"' Cargo.toml | sed -E 's/version\\s*=\\s*"([^"]+)"/\\1/')"
+          crate_version="$(
+            awk '
+              BEGIN { in_package=0 }
+              /^\[package\]/ { in_package=1; next }
+              /^\[/ && in_package { exit }
+              in_package && $0 ~ /^version[[:space:]]*=/ {
+                gsub(/"/, "", $0)
+                sub(/^version[[:space:]]*=[[:space:]]*/, "", $0)
+                print $0
+                exit
+              }
+            ' Cargo.toml
+          )"
+          if [[ -z "${crate_version}" ]]; then
+            echo "failed to parse package.version from Cargo.toml" >&2
+            exit 1
+          fi
           expected_tag="v${crate_version}"
           if [[ "${TAG}" != "${expected_tag}" ]]; then
             echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
