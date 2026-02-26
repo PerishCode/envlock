@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use anyhow::{Result, bail};
 
+use crate::app::AppContext;
 use crate::profile::{EnvOpProfile, EnvProfile};
 
 pub(crate) struct EnvInjection {
@@ -61,9 +63,15 @@ impl EnvInjection {
         Ok(())
     }
 
-    pub(crate) fn export(&self) -> Result<Vec<(String, String)>> {
-        let mut env = self.cfg.vars.clone();
-        apply_ops(&mut env, &self.cfg.ops)?;
+    pub(crate) fn export(&self, app: &dyn AppContext) -> Result<Vec<(String, String)>> {
+        let resource_home = &app.config().resource_home;
+        let mut env = self
+            .cfg
+            .vars
+            .iter()
+            .map(|(k, v)| (k.clone(), resolve_resource_refs(v, resource_home)))
+            .collect();
+        apply_ops(app, &mut env, &self.cfg.ops, resource_home)?;
         Ok(env.into_iter().collect())
     }
 
@@ -82,15 +90,20 @@ fn validate_key_value(key: &str, value: &str) -> Result<()> {
     Ok(())
 }
 
-fn apply_ops(env: &mut BTreeMap<String, String>, ops: &[EnvOpProfile]) -> Result<()> {
+fn apply_ops(
+    app: &dyn AppContext,
+    env: &mut BTreeMap<String, String>,
+    ops: &[EnvOpProfile],
+    resource_home: &Path,
+) -> Result<()> {
     for op in ops {
         match op {
             EnvOpProfile::Set { key, value } => {
-                env.insert(key.clone(), value.clone());
+                env.insert(key.clone(), resolve_resource_refs(value, resource_home));
             }
             EnvOpProfile::SetIfAbsent { key, value } => {
-                if !env.contains_key(key) && std::env::var_os(key).is_none() {
-                    env.insert(key.clone(), value.clone());
+                if !env.contains_key(key) && app.env().var(key).is_none() {
+                    env.insert(key.clone(), resolve_resource_refs(value, resource_home));
                 }
             }
             EnvOpProfile::Prepend {
@@ -103,9 +116,10 @@ fn apply_ops(env: &mut BTreeMap<String, String>, ops: &[EnvOpProfile]) -> Result
                 let base = env
                     .get(key)
                     .cloned()
-                    .or_else(|| std::env::var(key).ok())
+                    .or_else(|| app.env().var(key))
                     .unwrap_or_default();
-                env.insert(key.clone(), merge_values(value, &base, sep, *dedup));
+                let resolved = resolve_resource_refs(value, resource_home);
+                env.insert(key.clone(), merge_values(&resolved, &base, sep, *dedup));
             }
             EnvOpProfile::Append {
                 key,
@@ -117,9 +131,10 @@ fn apply_ops(env: &mut BTreeMap<String, String>, ops: &[EnvOpProfile]) -> Result
                 let base = env
                     .get(key)
                     .cloned()
-                    .or_else(|| std::env::var(key).ok())
+                    .or_else(|| app.env().var(key))
                     .unwrap_or_default();
-                env.insert(key.clone(), merge_values(&base, value, sep, *dedup));
+                let resolved = resolve_resource_refs(value, resource_home);
+                env.insert(key.clone(), merge_values(&base, &resolved, sep, *dedup));
             }
             EnvOpProfile::Unset { key } => {
                 env.remove(key);
@@ -170,11 +185,101 @@ fn split_parts(value: &str, separator: &str) -> Vec<String> {
         .collect()
 }
 
+fn resolve_resource_refs(value: &str, resource_home: &Path) -> String {
+    let prefix = "resource://";
+    let mut out = String::new();
+    let mut rest = value;
+    while let Some(idx) = rest.find(prefix) {
+        out.push_str(&rest[..idx]);
+        let token_start = idx + prefix.len();
+        let after = &rest[token_start..];
+        let token_end = after
+            .char_indices()
+            .find(|(_, c)| *c == ':' || *c == ';')
+            .map(|(i, _)| i)
+            .unwrap_or(after.len());
+        let rel = &after[..token_end];
+        if rel.is_empty() {
+            out.push_str(prefix);
+        } else {
+            let abs = resource_home.join(rel);
+            out.push_str(&abs.to_string_lossy());
+        }
+        rest = &after[token_end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+    use std::path::PathBuf;
 
     use super::*;
+    use crate::app::{AppContext, CommandRunner, EnvReader};
+    use crate::config::{LogFormat, OutputMode, RuntimeConfig};
+    use tracing_subscriber::filter::LevelFilter;
+
+    struct TestEnv {
+        vars: BTreeMap<String, String>,
+    }
+
+    impl EnvReader for TestEnv {
+        fn var(&self, key: &str) -> Option<String> {
+            self.vars.get(key).cloned()
+        }
+    }
+
+    struct TestRunner;
+
+    impl CommandRunner for TestRunner {
+        fn output(&self, program: &str, args: &[String]) -> Result<std::process::Output> {
+            std::process::Command::new(program)
+                .args(args)
+                .output()
+                .map_err(Into::into)
+        }
+    }
+
+    struct TestApp {
+        cfg: RuntimeConfig,
+        env: TestEnv,
+        runner: TestRunner,
+    }
+
+    impl TestApp {
+        fn new(resource_home: &str, vars: BTreeMap<String, String>) -> Self {
+            Self {
+                cfg: RuntimeConfig {
+                    profile_path: PathBuf::from("/tmp/unused.json"),
+                    output_mode: OutputMode::Shell,
+                    strict: false,
+                    log_level: LevelFilter::WARN,
+                    log_format: LogFormat::Text,
+                    command: None,
+                    profile_home: PathBuf::from("/tmp/profile-home"),
+                    resource_home: PathBuf::from(resource_home),
+                },
+                env: TestEnv { vars },
+                runner: TestRunner,
+            }
+        }
+    }
+
+    impl AppContext for TestApp {
+        fn config(&self) -> &RuntimeConfig {
+            &self.cfg
+        }
+
+        fn env(&self) -> &dyn EnvReader {
+            &self.env
+        }
+
+        fn command_runner(&self) -> &dyn CommandRunner {
+            &self.runner
+        }
+    }
 
     #[test]
     fn rejects_empty_env_key() {
@@ -203,8 +308,9 @@ mod tests {
                 dedup: true,
             }],
         });
+        let app = TestApp::new("/tmp/envlock-res", BTreeMap::new());
 
-        let exports = injection.export().expect("export should pass");
+        let exports = injection.export(&app).expect("export should pass");
         let path = exports
             .into_iter()
             .find(|(k, _)| k == "PATH")
@@ -216,8 +322,10 @@ mod tests {
     #[test]
     fn set_if_absent_uses_current_env() {
         let key = "ENVLOCK_TEST_SET_IF_ABSENT";
-        // SAFETY: test-scoped environment mutation to verify semantics.
-        unsafe { std::env::set_var(key, "present") };
+        let app = TestApp::new(
+            "/tmp/envlock-res",
+            BTreeMap::from([(key.to_string(), "present".to_string())]),
+        );
         let injection = EnvInjection::new(EnvProfile {
             enabled: true,
             vars: BTreeMap::new(),
@@ -226,9 +334,28 @@ mod tests {
                 value: "fallback".to_string(),
             }],
         });
-        let exports = injection.export().expect("export should pass");
+        let exports = injection.export(&app).expect("export should pass");
         assert!(!exports.iter().any(|(k, _)| k == key));
-        // SAFETY: restore environment after assertion.
-        unsafe { std::env::remove_var(key) };
+    }
+
+    #[test]
+    fn resolves_resource_uri_with_default_home() {
+        let resolved = resolve_resource_refs(
+            "resource://kubeconfig/xx.yaml",
+            std::path::Path::new("/tmp/envlock-res"),
+        );
+        assert_eq!(resolved, "/tmp/envlock-res/kubeconfig/xx.yaml");
+    }
+
+    #[test]
+    fn resolves_multiple_resource_uris_in_one_value() {
+        let resolved = resolve_resource_refs(
+            "resource://kubeconfig/xx.yaml:resource://kubeconfig/yy.yaml",
+            std::path::Path::new("/tmp/envlock-res"),
+        );
+        assert_eq!(
+            resolved,
+            "/tmp/envlock-res/kubeconfig/xx.yaml:/tmp/envlock-res/kubeconfig/yy.yaml"
+        );
     }
 }

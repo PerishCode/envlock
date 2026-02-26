@@ -1,42 +1,49 @@
+pub mod app;
+pub mod config;
 pub mod injections;
 pub mod profile;
 
-use std::{collections::BTreeMap, path::Path, process::Command};
+use std::{collections::BTreeMap, process::Command};
 
 use anyhow::{Context, Result, bail};
 use tracing::{debug, info};
 
-pub struct RunOptions {
-    pub json: bool,
-    pub strict: bool,
-    pub command: Option<Vec<String>>,
-}
+use crate::app::AppContext;
+use crate::config::OutputMode;
 
 pub struct RunResult {
     pub exit_code: Option<i32>,
 }
 
-pub fn run(profile_path: &Path, options: &RunOptions) -> Result<RunResult> {
+pub fn run(app: &dyn AppContext) -> Result<RunResult> {
+    let config = app.config();
     info!(
-        profile_path = %profile_path.display(),
-        json = options.json,
-        strict = options.strict,
-        has_command = options.command.is_some(),
+        profile_path = %config.profile_path.display(),
+        output_mode = match config.output_mode {
+            OutputMode::Shell => "shell",
+            OutputMode::Json => "json",
+        },
+        strict = config.strict,
+        has_command = config.command.is_some(),
         "envlock run started"
     );
-    let profile = profile::load(profile_path).context("unable to load envlock profile")?;
-    let run_result = injections::with_registered_exports(profile.injections, |exports| {
+    let profile = profile::load(&config.profile_path).context("unable to load envlock profile")?;
+    let run_result = injections::with_registered_exports(app, profile.injections, |exports| {
         info!(
             export_count = exports.len(),
             "injections lifecycle completed"
         );
-        if let Some(command) = &options.command {
+        if let Some(command) = &config.command {
             let code = run_command(command, exports)?;
             return Ok(RunResult {
                 exit_code: Some(code),
             });
         }
-        print_outputs(exports.to_vec(), options.json, options.strict)?;
+        print_outputs(
+            exports.to_vec(),
+            matches!(config.output_mode, OutputMode::Json),
+            config.strict,
+        )?;
         Ok(RunResult { exit_code: None })
     })?;
     info!("envlock run completed");

@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 use std::process;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
-use envlock::{RunOptions, run};
+use envlock::app::{App, AppContext};
+use envlock::config::{CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig};
+use envlock::run;
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Debug, Parser)]
@@ -37,51 +39,31 @@ struct Cli {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    init_logging(cli.log_level, cli.log_format)?;
-    let profile_path = resolve_profile_path(&cli)?;
-    let result = run(
-        &profile_path,
-        &RunOptions {
-            json: matches!(cli.output, OutputFormat::Json),
-            strict: cli.strict,
-            command: if cli.command.is_empty() {
-                None
-            } else {
-                Some(cli.command)
+    let config = RuntimeConfig::from_cli_and_env(
+        CliInput {
+            profile: cli.profile,
+            use_name: cli.use_name,
+            output_mode: match cli.output {
+                OutputFormat::Shell => OutputMode::Shell,
+                OutputFormat::Json => OutputMode::Json,
             },
+            strict: cli.strict,
+            log_level: cli.log_level.into(),
+            log_format: match cli.log_format {
+                LogFormat::Text => RuntimeLogFormat::Text,
+                LogFormat::Json => RuntimeLogFormat::Json,
+            },
+            command: cli.command,
         },
+        RawEnv::from_process(),
     )?;
+    let app = App::new(config);
+    init_logging(app.config().log_level, app.config().log_format)?;
+    let result = run(&app)?;
     if let Some(code) = result.exit_code {
         process::exit(code);
     }
     Ok(())
-}
-
-fn resolve_profile_path(cli: &Cli) -> Result<PathBuf> {
-    if let Some(profile) = &cli.profile {
-        return Ok(profile.clone());
-    }
-
-    if let Some(use_name) = &cli.use_name {
-        if use_name.trim().is_empty() {
-            bail!("--use must not be empty");
-        }
-        let profile_home = std::env::var("ENVLOCK_PROFILE_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| default_profile_home());
-        return Ok(profile_home
-            .join("profiles")
-            .join(format!("{use_name}.json")));
-    }
-
-    bail!("one of --profile or --use is required")
-}
-
-fn default_profile_home() -> PathBuf {
-    if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".envlock");
-    }
-    PathBuf::from("~/.envlock")
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -117,19 +99,21 @@ enum LogFormat {
     Json,
 }
 
-fn init_logging(level: LogLevel, format: LogFormat) -> Result<()> {
-    let default_level: tracing_subscriber::filter::LevelFilter = level.into();
+fn init_logging(
+    level: tracing_subscriber::filter::LevelFilter,
+    format: RuntimeLogFormat,
+) -> Result<()> {
     let env_filter = EnvFilter::builder()
-        .with_default_directive(default_level.into())
+        .with_default_directive(level.into())
         .from_env_lossy();
 
     match format {
-        LogFormat::Text => tracing_subscriber::registry()
+        RuntimeLogFormat::Text => tracing_subscriber::registry()
             .with(env_filter)
             .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
             .try_init()
             .context("failed to initialize text logger")?,
-        LogFormat::Json => tracing_subscriber::registry()
+        RuntimeLogFormat::Json => tracing_subscriber::registry()
             .with(env_filter)
             .with(
                 tracing_subscriber::fmt::layer()

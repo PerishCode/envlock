@@ -38,6 +38,10 @@ envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [-
 - `append`
 - `unset`
 
+`env` values also support `resource://` URI expansion:
+- `resource://...` resolves against `ENVLOCK_RESOURCE_HOME`
+- default resource home is `~/.envlock/resources` when `ENVLOCK_RESOURCE_HOME` is unset
+
 Boundary:
 - Use `env` for static values and simple composition.
 - Use `command` for dynamic environment bootstrapping (for example `fnm env --shell bash`).
@@ -69,6 +73,11 @@ Boundary:
           "op": "set_if_absent",
           "key": "NPM_CONFIG_REGISTRY",
           "value": "https://registry.npmjs.org"
+        },
+        {
+          "op": "set",
+          "key": "KUBECONFIG",
+          "value": "resource://kubeconfig/xx.yaml:resource://kubeconfig/yy.yaml"
         }
       ]
     },

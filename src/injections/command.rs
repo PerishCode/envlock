@@ -1,7 +1,6 @@
-use std::process::Command;
-
 use anyhow::{Context, Result, bail};
 
+use crate::app::{AppContext, EnvReader};
 use crate::profile::CommandProfile;
 
 pub(crate) struct CommandInjection {
@@ -28,10 +27,10 @@ impl CommandInjection {
         Ok(())
     }
 
-    pub(crate) fn export(&self) -> Result<Vec<(String, String)>> {
-        let output = Command::new(&self.cfg.program)
-            .args(&self.cfg.args)
-            .output()
+    pub(crate) fn export(&self, app: &dyn AppContext) -> Result<Vec<(String, String)>> {
+        let output = app
+            .command_runner()
+            .output(&self.cfg.program, &self.cfg.args)
             .with_context(|| format!("failed to run command: {}", self.cfg.program))?;
 
         if !output.status.success() {
@@ -46,7 +45,7 @@ impl CommandInjection {
 
         let stdout =
             String::from_utf8(output.stdout).context("command stdout is not valid UTF-8")?;
-        Ok(parse_exports(&stdout))
+        Ok(parse_exports(&stdout, app.env()))
     }
 
     pub(crate) fn shutdown(&mut self) -> Result<()> {
@@ -54,7 +53,7 @@ impl CommandInjection {
     }
 }
 
-fn parse_exports(stdout: &str) -> Vec<(String, String)> {
+fn parse_exports(stdout: &str, env: &dyn EnvReader) -> Vec<(String, String)> {
     let mut out = Vec::new();
     for line in stdout.lines() {
         let trimmed = line.trim();
@@ -69,18 +68,18 @@ fn parse_exports(stdout: &str) -> Vec<(String, String)> {
         if key.is_empty() {
             continue;
         }
-        let value = normalize_value(value_raw.trim());
+        let value = normalize_value(value_raw.trim(), env);
         out.push((key.to_string(), value));
     }
     out
 }
 
-fn normalize_value(raw: &str) -> String {
+fn normalize_value(raw: &str, env: &dyn EnvReader) -> String {
     let unquoted = raw.replace('"', "").replace('\'', "");
-    expand_vars(&unquoted)
+    expand_vars(&unquoted, env)
 }
 
-fn expand_vars(input: &str) -> String {
+fn expand_vars(input: &str, env: &dyn EnvReader) -> String {
     let mut out = String::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0usize;
@@ -99,7 +98,7 @@ fn expand_vars(input: &str) -> String {
             if j < chars.len() {
                 let key: String = chars[i + 2..j].iter().collect();
                 if !key.is_empty() {
-                    out.push_str(&std::env::var(&key).unwrap_or_default());
+                    out.push_str(&env.var(&key).unwrap_or_default());
                 }
                 i = j + 1;
                 continue;
@@ -112,7 +111,7 @@ fn expand_vars(input: &str) -> String {
         }
         if j > i + 1 {
             let key: String = chars[i + 1..j].iter().collect();
-            out.push_str(&std::env::var(&key).unwrap_or_default());
+            out.push_str(&env.var(&key).unwrap_or_default());
             i = j;
             continue;
         }
@@ -125,11 +124,26 @@ fn expand_vars(input: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use super::*;
+
+    struct MockEnv {
+        vars: BTreeMap<String, String>,
+    }
+
+    impl EnvReader for MockEnv {
+        fn var(&self, key: &str) -> Option<String> {
+            self.vars.get(key).cloned()
+        }
+    }
 
     #[test]
     fn parse_export_and_plain_assignment() {
-        let vars = parse_exports("export A='1'\nB=2\nignored line\n");
+        let env = MockEnv {
+            vars: BTreeMap::new(),
+        };
+        let vars = parse_exports("export A='1'\nB=2\nignored line\n", &env);
         assert_eq!(
             vars,
             vec![
@@ -141,15 +155,16 @@ mod tests {
 
     #[test]
     fn parse_fnm_style_path_value() {
-        let key = "ENVLOCK_TEST_PATH";
-        // SAFETY: test-scoped environment mutation to verify expansion semantics.
-        unsafe { std::env::set_var(key, "/usr/bin:/bin") };
-        let vars = parse_exports("export PATH=\"/tmp/fnm/bin\":\"$ENVLOCK_TEST_PATH\"\n");
+        let env = MockEnv {
+            vars: BTreeMap::from([("ENVLOCK_TEST_PATH".to_string(), "/usr/bin:/bin".to_string())]),
+        };
+        let vars = parse_exports(
+            "export PATH=\"/tmp/fnm/bin\":\"$ENVLOCK_TEST_PATH\"\n",
+            &env,
+        );
         assert_eq!(
             vars,
             vec![("PATH".to_string(), "/tmp/fnm/bin:/usr/bin:/bin".to_string())]
         );
-        // SAFETY: restore environment after assertion.
-        unsafe { std::env::remove_var(key) };
     }
 }
