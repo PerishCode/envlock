@@ -143,14 +143,41 @@ brew upgrade envlock
 
 - `CI` workflow (`.github/workflows/ci.yml`) runs on pull requests and pushes to `main`.
 - `Release` workflow (`.github/workflows/release.yml`) runs on tag push `v*`.
+- Multi-binary packaging is controlled by `TOOLS` in `release.yml`.
+  Add another binary name to `TOOLS` to include it in release artifacts.
+- Homebrew tap target repository is configured by `HOMEBREW_TAP_REPO` in `release.yml`.
 - Release workflow builds archives for:
   - `x86_64-unknown-linux-gnu`
   - `x86_64-apple-darwin`
   - `aarch64-apple-darwin`
-- Artifacts and `checksums.txt` are published to GitHub Release.
+- Artifacts, `checksums.txt`, and `dist/tap/*.env` metadata are published to GitHub Release.
+- If repository secret `HOMEBREW_TAP_TOKEN` is configured, release workflow also syncs formulas into the tap repository automatically.
 
 Typical release steps:
 
 1. Merge to `main` after CI passes.
 2. Create and push tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. Wait for `Release` workflow to publish artifacts.
+
+Required secret for tap sync:
+
+- `HOMEBREW_TAP_TOKEN`: Fine-grained PAT with `Contents: Read and Write` on `PerishCode/homebrew-tap`.
+
+## Tap Formula Script
+
+Use `scripts/update-tap-formula.sh` to generate/update a Homebrew formula in a tap repository:
+
+```bash
+scripts/update-tap-formula.sh \
+  --formula /path/to/homebrew-tap/Formula/envlock.rb \
+  --tool envlock \
+  --desc "Build environment sessions from JSON profile" \
+  --homepage "https://github.com/PerishCode/envlock" \
+  --version v0.1.0 \
+  --macos-arm-url "https://github.com/PerishCode/envlock/releases/download/v0.1.0/envlock-v0.1.0-aarch64-apple-darwin.tar.gz" \
+  --macos-arm-sha256 "<sha256>" \
+  --macos-amd-url "https://github.com/PerishCode/envlock/releases/download/v0.1.0/envlock-v0.1.0-x86_64-apple-darwin.tar.gz" \
+  --macos-amd-sha256 "<sha256>" \
+  --linux-amd-url "https://github.com/PerishCode/envlock/releases/download/v0.1.0/envlock-v0.1.0-x86_64-unknown-linux-gnu.tar.gz" \
+  --linux-amd-sha256 "<sha256>"
+```

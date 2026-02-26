@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
-use reqwest::blocking::Client;
 use reqwest::StatusCode;
+use reqwest::blocking::Client;
 use semver::Version;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
