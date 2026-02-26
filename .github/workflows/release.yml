@@ -81,6 +81,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout release repo for scripts
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -143,10 +146,6 @@ jobs:
           else
             echo "enabled=false" >> "${GITHUB_OUTPUT}"
           fi
-
-      - name: Checkout release repo for scripts
-        if: ${{ steps.tap_token.outputs.enabled == 'true' }}
-        uses: actions/checkout@v4
 
       - name: Sync Homebrew tap
         if: ${{ steps.tap_token.outputs.enabled == 'true' }}
