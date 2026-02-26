@@ -2,11 +2,12 @@
 
 - **Branch:** feat/local-e2e-validation
 - **Status:** Active
-- **Last-Sync:** 2026-02-26 13:59:10 +0800 (on ZQXY123deMacBook-Pro.local)
-- **Current Context:** Designed fnm+kube local profiles and completed manual `--use` + `eval` validation for dev/staging/prod-readonly.
+- **Last-Sync:** 2026-02-26 14:08:41 +0800 (on ZQXY123deMacBook-Pro.local)
+- **Current Context:** WIP checkpoint commit `e899aa9` created; next session should continue from Phase 1.2 for real local environment E2E validation.
 
 ## Phase Stack
 > Current execution depth (Top is active)
+- **1.2 (active):** Run real local fnm+kube end-to-end validation workflow and capture operational notes
 - **1.1 (completed):** Define local E2E verification scope and execute baseline validation run
 
 ## Timeline
@@ -16,6 +17,8 @@
 - [2026-02-26 13:45:46 +0800] RESET: Reinitialized `.task/` to start a new branch-bound task.
 - [2026-02-26 13:45:46 +0800] PHASE-PUSH: Opened Phase 1.1 for local end-to-end verification bootstrap.
 - [2026-02-26 13:59:10 +0800] PHASE-COMPLETE: Phase 1.1 done with fnm+kube profile design and manual local validation.
+- [2026-02-26 14:08:41 +0800] CHECKPOINT: Created WIP commit `e899aa9` for session handoff.
+- [2026-02-26 14:08:41 +0800] PHASE-PUSH: Opened Phase 1.2 for real local fnm+kube end-to-end verification and notes capture.
 
 ## Global References
 - **Docs:** `README.md`, `AGENTS.md`
