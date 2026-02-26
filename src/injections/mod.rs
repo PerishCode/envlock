@@ -5,16 +5,24 @@ mod symlink;
 use anyhow::{Context, Result, anyhow};
 use tracing::{debug, info};
 
+use crate::app::AppContext;
 use crate::profile::InjectionProfile;
 use command::CommandInjection;
 use env::EnvInjection;
 use symlink::SymlinkInjection;
 
-pub fn execute_lifecycle(specs: Vec<InjectionProfile>) -> Result<Vec<(String, String)>> {
-    with_registered_exports(specs, |exports| Ok(exports.to_vec()))
+pub fn execute_lifecycle(
+    app: &dyn AppContext,
+    specs: Vec<InjectionProfile>,
+) -> Result<Vec<(String, String)>> {
+    with_registered_exports(app, specs, |exports| Ok(exports.to_vec()))
 }
 
-pub fn with_registered_exports<T, F>(specs: Vec<InjectionProfile>, work: F) -> Result<T>
+pub fn with_registered_exports<T, F>(
+    app: &dyn AppContext,
+    specs: Vec<InjectionProfile>,
+    work: F,
+) -> Result<T>
 where
     F: FnOnce(&[(String, String)]) -> Result<T>,
 {
@@ -48,7 +56,7 @@ where
         registered += 1;
     }
 
-    let export_result = collect_exports(&injections);
+    let export_result = collect_exports(app, &injections);
     let work_result = match &export_result {
         Ok(exports) => Some(work(exports)),
         Err(_) => None,
@@ -71,7 +79,10 @@ where
     }
 }
 
-fn collect_exports(injections: &[RuntimeInjection]) -> Result<Vec<(String, String)>> {
+fn collect_exports(
+    app: &dyn AppContext,
+    injections: &[RuntimeInjection],
+) -> Result<Vec<(String, String)>> {
     let mut exports = Vec::new();
     for injection in injections {
         debug!(
@@ -80,7 +91,7 @@ fn collect_exports(injections: &[RuntimeInjection]) -> Result<Vec<(String, Strin
             "running stage"
         );
         let exported = injection
-            .export()
+            .export(app)
             .with_context(|| format!("{} export failed", injection.name()))?;
         debug!(
             injection = injection.name(),
@@ -162,10 +173,10 @@ impl RuntimeInjection {
         }
     }
 
-    fn export(&self) -> Result<Vec<(String, String)>> {
+    fn export(&self, app: &dyn AppContext) -> Result<Vec<(String, String)>> {
         match self {
-            Self::Env(inner) => inner.export(),
-            Self::Command(inner) => inner.export(),
+            Self::Env(inner) => inner.export(app),
+            Self::Command(inner) => inner.export(app),
             Self::Symlink(inner) => inner.export(),
         }
     }
@@ -182,7 +193,69 @@ impl RuntimeInjection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::{AppContext, CommandRunner, EnvReader};
+    use crate::config::{LogFormat, OutputMode, RuntimeConfig};
     use std::collections::BTreeMap;
+    use std::path::PathBuf;
+    use tracing_subscriber::filter::LevelFilter;
+
+    struct TestEnv;
+
+    impl EnvReader for TestEnv {
+        fn var(&self, _key: &str) -> Option<String> {
+            None
+        }
+    }
+
+    struct TestRunner;
+
+    impl CommandRunner for TestRunner {
+        fn output(&self, program: &str, args: &[String]) -> Result<std::process::Output> {
+            std::process::Command::new(program)
+                .args(args)
+                .output()
+                .map_err(Into::into)
+        }
+    }
+
+    struct TestApp {
+        cfg: RuntimeConfig,
+        env: TestEnv,
+        runner: TestRunner,
+    }
+
+    impl TestApp {
+        fn new() -> Self {
+            Self {
+                cfg: RuntimeConfig {
+                    profile_path: PathBuf::from("/tmp/unused.json"),
+                    output_mode: OutputMode::Shell,
+                    strict: false,
+                    log_level: LevelFilter::WARN,
+                    log_format: LogFormat::Text,
+                    command: None,
+                    profile_home: PathBuf::from("/tmp/profile-home"),
+                    resource_home: PathBuf::from("/tmp/envlock-res"),
+                },
+                env: TestEnv,
+                runner: TestRunner,
+            }
+        }
+    }
+
+    impl AppContext for TestApp {
+        fn config(&self) -> &RuntimeConfig {
+            &self.cfg
+        }
+
+        fn env(&self) -> &dyn EnvReader {
+            &self.env
+        }
+
+        fn command_runner(&self) -> &dyn CommandRunner {
+            &self.runner
+        }
+    }
 
     #[test]
     fn skip_disabled_env_injection() {
@@ -199,7 +272,8 @@ mod tests {
             }),
         ];
 
-        let exports = execute_lifecycle(specs).expect("lifecycle should pass");
+        let app = TestApp::new();
+        let exports = execute_lifecycle(&app, specs).expect("lifecycle should pass");
         assert_eq!(exports.len(), 1);
         assert!(exports.contains(&("B".to_string(), "2".to_string())));
     }
@@ -212,7 +286,8 @@ mod tests {
             ops: Vec::new(),
         })];
 
-        let err = execute_lifecycle(specs).expect_err("empty env key should fail");
+        let app = TestApp::new();
+        let err = execute_lifecycle(&app, specs).expect_err("empty env key should fail");
         assert!(err.to_string().contains("validation failed"));
     }
 
@@ -227,7 +302,8 @@ mod tests {
             ],
         })];
 
-        let exports = execute_lifecycle(specs).expect("command lifecycle should pass");
+        let app = TestApp::new();
+        let exports = execute_lifecycle(&app, specs).expect("command lifecycle should pass");
         assert!(exports.contains(&("CMD_A".to_string(), "1".to_string())));
         assert!(exports.contains(&("CMD_B".to_string(), "2".to_string())));
     }
