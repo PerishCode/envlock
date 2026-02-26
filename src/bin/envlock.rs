@@ -2,10 +2,11 @@ use std::path::PathBuf;
 use std::process;
 
 use anyhow::{Context, Result};
-use clap::{Parser, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use envlock::app::{App, AppContext};
 use envlock::config::{CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig};
 use envlock::run;
+use envlock::self_update::{SelfUpdateOptions, run as run_self_update};
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Debug, Parser)]
@@ -15,6 +16,32 @@ use tracing_subscriber::{EnvFilter, prelude::*};
     about = "Build environment sessions from JSON profile"
 )]
 struct Cli {
+    #[command(subcommand)]
+    subcommand: Option<Commands>,
+
+    #[command(flatten)]
+    run_args: RunArgs,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    SelfUpdate(SelfUpdateArgs),
+}
+
+#[derive(Debug, Args)]
+struct SelfUpdateArgs {
+    #[arg(long = "check")]
+    check: bool,
+
+    #[arg(long = "version")]
+    version: Option<String>,
+
+    #[arg(long = "yes", short = 'y')]
+    yes: bool,
+}
+
+#[derive(Debug, Args)]
+struct RunArgs {
     #[arg(short = 'p', long = "profile")]
     profile: Option<PathBuf>,
 
@@ -39,21 +66,29 @@ struct Cli {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    if let Some(Commands::SelfUpdate(args)) = cli.subcommand {
+        return run_self_update(SelfUpdateOptions {
+            check_only: args.check,
+            version: args.version,
+            yes: args.yes,
+        });
+    }
+
     let config = RuntimeConfig::from_cli_and_env(
         CliInput {
-            profile: cli.profile,
-            use_name: cli.use_name,
-            output_mode: match cli.output {
+            profile: cli.run_args.profile,
+            use_name: cli.run_args.use_name,
+            output_mode: match cli.run_args.output {
                 OutputFormat::Shell => OutputMode::Shell,
                 OutputFormat::Json => OutputMode::Json,
             },
-            strict: cli.strict,
-            log_level: cli.log_level.into(),
-            log_format: match cli.log_format {
+            strict: cli.run_args.strict,
+            log_level: cli.run_args.log_level.into(),
+            log_format: match cli.run_args.log_format {
                 LogFormat::Text => RuntimeLogFormat::Text,
                 LogFormat::Json => RuntimeLogFormat::Json,
             },
-            command: cli.command,
+            command: cli.run_args.command,
         },
         RawEnv::from_process(),
     )?;
