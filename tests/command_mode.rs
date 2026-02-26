@@ -69,3 +69,53 @@ fn command_mode_propagates_child_exit_code() {
 
     assert_eq!(output.status.code(), Some(17));
 }
+
+#[test]
+fn command_mode_resolves_resource_content_uri() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let resource_home = temp.path().join("resources");
+    std::fs::create_dir_all(resource_home.join("opencode"))
+        .expect("resource directory should be created");
+    std::fs::write(
+        resource_home.join("opencode/config.json"),
+        "{\"default_agent\":\"alpha\"}",
+    )
+    .expect("resource file should be written");
+
+    let profile = temp.path().join("resource-content-profile.json");
+    std::fs::write(
+        &profile,
+        r#"{
+  "injections": [
+    {
+      "type": "env",
+      "vars": {
+        "OPENCODE_CONFIG_CONTENT": "resource-content://opencode/config.json"
+      }
+    }
+  ]
+}"#,
+    )
+    .expect("profile should be written");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "-p",
+            profile
+                .to_str()
+                .expect("profile path should be valid UTF-8"),
+            "--log-level",
+            "error",
+            "--",
+            "bash",
+            "-lc",
+            "printf '%s' \"$OPENCODE_CONFIG_CONTENT\"",
+        ])
+        .env("ENVLOCK_RESOURCE_HOME", &resource_home)
+        .output()
+        .expect("envlock command should run");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("stdout should be UTF-8");
+    assert_eq!(stdout, "{\"default_agent\":\"alpha\"}");
+}
