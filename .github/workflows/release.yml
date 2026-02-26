@@ -88,9 +88,9 @@ jobs:
 
       - name: Merge checksums
         run: |
-          find dist -name '*.txt' -type f -exec cat {} + > dist/checksums.txt
-          sort -k2 dist/checksums.txt | uniq > dist/checksums.sorted.txt
-          mv dist/checksums.sorted.txt dist/checksums.txt
+          tmp_checksums="$(mktemp)"
+          find dist -name '*.txt' -type f ! -path 'dist/checksums.txt' -exec cat {} + > "${tmp_checksums}"
+          sort -k2 "${tmp_checksums}" | uniq > dist/checksums.txt
 
       - name: Prepare tap metadata
         env:
