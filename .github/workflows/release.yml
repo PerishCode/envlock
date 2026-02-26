@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  TOOLS: "envlock"
+  HOMEBREW_TAP_REPO: "PerishCode/homebrew-tap"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-14
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Build release binaries
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          for tool in ${TOOLS}; do
+            cargo build --locked --release --target "${TARGET}" --bin "${tool}"
+          done
+
+      - name: Package archives
+        env:
+          VERSION: ${{ github.ref_name }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          mkdir -p dist
+          for tool in ${TOOLS}; do
+            cp "target/${TARGET}/release/${tool}" "dist/${tool}"
+            tar -C dist -czf "dist/${tool}-${VERSION}-${TARGET}.tar.gz" "${tool}"
+            rm -f "dist/${tool}"
+          done
+
+      - name: Compute checksums
+        working-directory: dist
+        run: |
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum *.tar.gz > checksums.txt
+          else
+            shasum -a 256 *.tar.gz > checksums.txt
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Merge checksums
+        run: |
+          find dist -name '*.txt' -type f -exec cat {} + > dist/checksums.txt
+          sort -k2 dist/checksums.txt | uniq > dist/checksums.sorted.txt
+          mv dist/checksums.sorted.txt dist/checksums.txt
+
+      - name: Prepare tap metadata
+        env:
+          VERSION: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/tap
+          for tool in ${TOOLS}; do
+            linux_file="${tool}-${VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+            mac_amd_file="${tool}-${VERSION}-x86_64-apple-darwin.tar.gz"
+            mac_arm_file="${tool}-${VERSION}-aarch64-apple-darwin.tar.gz"
+
+            linux_sha="$(awk -v f="${linux_file}" '$2==f{print $1}' dist/checksums.txt)"
+            mac_amd_sha="$(awk -v f="${mac_amd_file}" '$2==f{print $1}' dist/checksums.txt)"
+            mac_arm_sha="$(awk -v f="${mac_arm_file}" '$2==f{print $1}' dist/checksums.txt)"
+
+            if [[ -z "${linux_sha}" || -z "${mac_amd_sha}" || -z "${mac_arm_sha}" ]]; then
+              echo "missing checksum entry for ${tool}" >&2
+              exit 1
+            fi
+
+            {
+              echo "TOOL=${tool}"
+              echo "VERSION=${VERSION}"
+              echo "MACOS_ARM_URL=https://github.com/${REPO}/releases/download/${VERSION}/${mac_arm_file}"
+              echo "MACOS_ARM_SHA256=${mac_arm_sha}"
+              echo "MACOS_AMD_URL=https://github.com/${REPO}/releases/download/${VERSION}/${mac_amd_file}"
+              echo "MACOS_AMD_SHA256=${mac_amd_sha}"
+              echo "LINUX_AMD_URL=https://github.com/${REPO}/releases/download/${VERSION}/${linux_file}"
+              echo "LINUX_AMD_SHA256=${linux_sha}"
+            } > "dist/tap/${tool}.env"
+          done
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/**/*.tar.gz
+            dist/checksums.txt
+            dist/tap/*.env
+
+      - name: Checkout release repo for scripts
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        uses: actions/checkout@v4
+
+      - name: Sync Homebrew tap
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${HOMEBREW_TAP_REPO}.git" tap-repo
+          scripts/sync-homebrew-tap.sh \
+            --metadata-dir dist/tap \
+            --tap-dir tap-repo \
+            --homepage "https://github.com/${REPO}"
+
+          cd tap-repo
+          if git diff --quiet -- Formula; then
+            echo "no formula changes detected"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula
+          git commit -m "chore: update homebrew formulas for ${VERSION}"
+          git push origin HEAD

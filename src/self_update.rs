@@ -1,0 +1,280 @@
+use std::io::{self, Cursor, Write};
+use std::path::PathBuf;
+
+use anyhow::{Context, Result, bail};
+use flate2::read::GzDecoder;
+use reqwest::StatusCode;
+use reqwest::blocking::Client;
+use semver::Version;
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
+use tar::Archive;
+use tempfile::TempDir;
+
+const REPO_OWNER: &str = "PerishCode";
+const REPO_NAME: &str = "envlock";
+
+#[derive(Debug, Clone)]
+pub struct SelfUpdateOptions {
+    pub check_only: bool,
+    pub version: Option<String>,
+    pub yes: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct Release {
+    tag_name: String,
+    assets: Vec<ReleaseAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReleaseAsset {
+    name: String,
+    browser_download_url: String,
+}
+
+pub fn run(options: SelfUpdateOptions) -> Result<()> {
+    if is_brew_managed_install()? {
+        bail!("envlock is Homebrew-managed. Please use: brew upgrade envlock");
+    }
+
+    let client = http_client()?;
+    let release = fetch_release(&client, options.version.as_deref())?;
+    let current = current_version()?;
+    let target = parse_semver(&release.tag_name)?;
+
+    if target <= current {
+        println!(
+            "envlock is up to date (current: v{}, target: {}).",
+            current, release.tag_name
+        );
+        return Ok(());
+    }
+
+    if options.check_only {
+        println!("Update available: v{} -> {}", current, release.tag_name);
+        return Ok(());
+    }
+
+    if !options.yes {
+        prompt_for_confirmation(&current, &release.tag_name)?;
+    }
+
+    let target_triple = current_target_triple()?;
+    let archive_name = format!("envlock-{}-{target_triple}.tar.gz", release.tag_name);
+    let archive_asset = find_asset(&release.assets, &archive_name)
+        .with_context(|| format!("release asset not found: {archive_name}"))?;
+    let checksums_asset = find_asset(&release.assets, "checksums.txt")
+        .context("checksums.txt not found in release assets")?;
+
+    let checksums_text = download_text(&client, &checksums_asset.browser_download_url)?;
+    let expected_sha = parse_checksum(&checksums_text, &archive_name)
+        .with_context(|| format!("checksum entry not found for {archive_name}"))?;
+
+    let archive_bytes = download_bytes(&client, &archive_asset.browser_download_url)?;
+    let actual_sha = sha256_hex(&archive_bytes);
+    if actual_sha != expected_sha {
+        bail!(
+            "checksum mismatch for {} (expected {}, got {})",
+            archive_name,
+            expected_sha,
+            actual_sha
+        );
+    }
+
+    let temp_dir = TempDir::new().context("failed to create temp directory")?;
+    let extracted_binary = extract_binary(&archive_bytes, temp_dir.path())?;
+    replace_current_binary(extracted_binary)?;
+
+    println!("Updated envlock to {}", release.tag_name);
+    Ok(())
+}
+
+fn http_client() -> Result<Client> {
+    Client::builder()
+        .user_agent(format!("{REPO_NAME}-self-update"))
+        .build()
+        .context("failed to build HTTP client")
+}
+
+fn fetch_release(client: &Client, version: Option<&str>) -> Result<Release> {
+    let url = if let Some(version) = version {
+        let tag = if version.starts_with('v') {
+            version.to_string()
+        } else {
+            format!("v{version}")
+        };
+        format!("https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/tags/{tag}")
+    } else {
+        format!("https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest")
+    };
+    let response = client
+        .get(url)
+        .send()
+        .context("failed to fetch release metadata")?;
+    if response.status() == StatusCode::NOT_FOUND {
+        if let Some(v) = version {
+            bail!("release tag not found: {v}");
+        }
+        bail!("no published release found yet");
+    }
+    response
+        .error_for_status()
+        .context("release metadata request failed")?
+        .json::<Release>()
+        .context("failed to parse release metadata")
+}
+
+fn current_version() -> Result<Version> {
+    Version::parse(env!("CARGO_PKG_VERSION")).context("invalid current version")
+}
+
+fn parse_semver(tag: &str) -> Result<Version> {
+    let normalized = tag.strip_prefix('v').unwrap_or(tag);
+    Version::parse(normalized).with_context(|| format!("invalid release tag version: {tag}"))
+}
+
+fn prompt_for_confirmation(current: &Version, next_tag: &str) -> Result<()> {
+    print!("Upgrade envlock from v{} to {}? [y/N]: ", current, next_tag);
+    io::stdout().flush().ok();
+    let mut answer = String::new();
+    io::stdin()
+        .read_line(&mut answer)
+        .context("failed to read confirmation input")?;
+    let answer = answer.trim().to_lowercase();
+    if answer != "y" && answer != "yes" {
+        bail!("update cancelled by user");
+    }
+    Ok(())
+}
+
+fn find_asset<'a>(assets: &'a [ReleaseAsset], name: &str) -> Option<&'a ReleaseAsset> {
+    assets.iter().find(|asset| asset.name == name)
+}
+
+fn download_text(client: &Client, url: &str) -> Result<String> {
+    client
+        .get(url)
+        .send()
+        .with_context(|| format!("failed to download {url}"))?
+        .error_for_status()
+        .with_context(|| format!("download request failed: {url}"))?
+        .text()
+        .with_context(|| format!("failed to parse text response: {url}"))
+}
+
+fn download_bytes(client: &Client, url: &str) -> Result<Vec<u8>> {
+    client
+        .get(url)
+        .send()
+        .with_context(|| format!("failed to download {url}"))?
+        .error_for_status()
+        .with_context(|| format!("download request failed: {url}"))?
+        .bytes()
+        .with_context(|| format!("failed to read bytes response: {url}"))
+        .map(|bytes| bytes.to_vec())
+}
+
+fn parse_checksum(checksums_text: &str, asset_name: &str) -> Option<String> {
+    checksums_text.lines().find_map(|line| {
+        let mut parts = line.split_whitespace();
+        let hash = parts.next()?;
+        let file = parts.next()?;
+        if file == asset_name || file == format!("*{asset_name}") {
+            return Some(hash.to_string());
+        }
+        None
+    })
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn extract_binary(archive_bytes: &[u8], temp_root: &std::path::Path) -> Result<PathBuf> {
+    let decoder = GzDecoder::new(Cursor::new(archive_bytes));
+    let mut archive = Archive::new(decoder);
+    archive
+        .unpack(temp_root)
+        .context("failed to unpack release archive")?;
+
+    let candidate = temp_root.join("envlock");
+    if candidate.is_file() {
+        return Ok(candidate);
+    }
+    bail!("envlock binary not found in release archive")
+}
+
+fn replace_current_binary(new_binary: PathBuf) -> Result<()> {
+    let current = std::env::current_exe().context("failed to resolve current executable")?;
+    let parent = current
+        .parent()
+        .context("failed to resolve executable parent directory")?;
+
+    let staged = parent.join(format!(".envlock.new.{}", std::process::id()));
+    std::fs::copy(&new_binary, &staged).context("failed to stage replacement binary")?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&staged)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&staged, perms).context("failed to set executable permissions")?;
+    }
+
+    let backup = parent.join(format!(".envlock.old.{}", std::process::id()));
+
+    std::fs::rename(&current, &backup).context("failed to rotate current binary")?;
+    if let Err(err) = std::fs::rename(&staged, &current) {
+        let _ = std::fs::rename(&backup, &current);
+        bail!("failed to install updated binary: {}", err);
+    }
+    let _ = std::fs::remove_file(&backup);
+    Ok(())
+}
+
+fn is_brew_managed_install() -> Result<bool> {
+    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+    let path = exe.to_string_lossy();
+    Ok(path.contains("/Cellar/") || path.contains("/Homebrew/Cellar/"))
+}
+
+fn current_target_triple() -> Result<&'static str> {
+    if cfg!(target_os = "linux") && cfg!(target_arch = "x86_64") {
+        return Ok("x86_64-unknown-linux-gnu");
+    }
+    if cfg!(target_os = "macos") && cfg!(target_arch = "x86_64") {
+        return Ok("x86_64-apple-darwin");
+    }
+    if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
+        return Ok("aarch64-apple-darwin");
+    }
+    bail!("self-update is not supported on this target yet")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_semver_accepts_v_prefix() {
+        let v = parse_semver("v1.2.3").expect("semver should parse");
+        assert_eq!(v, Version::new(1, 2, 3));
+    }
+
+    #[test]
+    fn parse_checksum_reads_sha256sum_format() {
+        let checksums = "abc123  envlock-v0.2.0-x86_64-unknown-linux-gnu.tar.gz\n";
+        let v = parse_checksum(checksums, "envlock-v0.2.0-x86_64-unknown-linux-gnu.tar.gz");
+        assert_eq!(v.as_deref(), Some("abc123"));
+    }
+
+    #[test]
+    fn parse_checksum_reads_shasum_star_format() {
+        let checksums = "def456 *envlock-v0.2.0-x86_64-unknown-linux-gnu.tar.gz\n";
+        let v = parse_checksum(checksums, "envlock-v0.2.0-x86_64-unknown-linux-gnu.tar.gz");
+        assert_eq!(v.as_deref(), Some("def456"));
+    }
+}
