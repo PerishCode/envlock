@@ -1,0 +1,20 @@
+{
+  "injections": [
+    {
+      "type": "node",
+      "enabled": true,
+      "version": "22.11.0",
+      "npm_registry": "https://registry.npmjs.org"
+    },
+    {
+      "type": "kube",
+      "enabled": true,
+      "context": "dev-cluster",
+      "namespace": "platform"
+    },
+    {
+      "type": "codex",
+      "enabled": true
+    }
+  ]
+}
