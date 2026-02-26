@@ -1,6 +1,6 @@
 # envlock
 
-`envlock` reads a JSON profile and prints environment exports for your shell.
+`envlock` reads a JSON profile and prepares environment variables for your shell or child command.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ eval "$(cargo run --quiet -- -p examples/envlock.sample.json)"
 ## CLI
 
 ```bash
-envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [--strict]
+envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [--strict] [-- <cmd...>]
 ```
 
 - `-p, --profile`: JSON profile file path.
@@ -27,8 +27,20 @@ envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [-
   If `ENVLOCK_PROFILE_HOME` is unset, default is `~/.envlock`.
 - `--output <shell|json>`: choose output mode (`shell` by default).
 - `--strict`: fail on duplicate exported keys.
+- `-- <cmd...>`: run a command with injected env in-process, and return the child exit code.
 - `--log-level <error|warn|info|debug|trace>`: set log verbosity (default: `warn`).
 - `--log-format <text|json>`: set log format (default: `text`).
+
+`env` injections support `ops` for non-destructive env composition:
+- `set`
+- `set_if_absent`
+- `prepend`
+- `append`
+- `unset`
+
+Boundary:
+- Use `env` for static values and simple composition.
+- Use `command` for dynamic environment bootstrapping (for example `fnm env --shell bash`).
 
 ## Profile Format
 
@@ -44,15 +56,27 @@ envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [-
         "NPM_CONFIG_REGISTRY": "https://registry.npmjs.org",
         "KUBECONFIG_CONTEXT": "dev-cluster",
         "KUBECONFIG_NAMESPACE": "platform"
-      }
+      },
+      "ops": [
+        {
+          "op": "prepend",
+          "key": "PATH",
+          "value": "~/.local/bin",
+          "separator": "os",
+          "dedup": true
+        },
+        {
+          "op": "set_if_absent",
+          "key": "NPM_CONFIG_REGISTRY",
+          "value": "https://registry.npmjs.org"
+        }
+      ]
     },
     {
-      "type": "symlink",
+      "type": "command",
       "enabled": false,
-      "source": "~/.config/codex-agents.md",
-      "target": "~/.codex/AGENTS.md",
-      "on_exist": "error",
-      "cleanup": true
+      "program": "fnm",
+      "args": ["env", "--shell", "bash"]
     }
   ]
 }

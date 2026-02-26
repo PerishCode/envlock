@@ -1,7 +1,7 @@
-pub mod profile;
 pub mod injections;
+pub mod profile;
 
-use std::{collections::BTreeMap, path::Path};
+use std::{collections::BTreeMap, path::Path, process::Command};
 
 use anyhow::{Context, Result, bail};
 use tracing::{debug, info};
@@ -9,24 +9,38 @@ use tracing::{debug, info};
 pub struct RunOptions {
     pub json: bool,
     pub strict: bool,
+    pub command: Option<Vec<String>>,
 }
 
-pub fn run(profile_path: &Path, options: &RunOptions) -> Result<()> {
+pub struct RunResult {
+    pub exit_code: Option<i32>,
+}
+
+pub fn run(profile_path: &Path, options: &RunOptions) -> Result<RunResult> {
     info!(
         profile_path = %profile_path.display(),
         json = options.json,
         strict = options.strict,
+        has_command = options.command.is_some(),
         "envlock run started"
     );
     let profile = profile::load(profile_path).context("unable to load envlock profile")?;
-    let exports = injections::execute_lifecycle(profile.injections)?;
-    info!(
-        export_count = exports.len(),
-        "injections lifecycle completed"
-    );
-    print_outputs(exports, options.json, options.strict)?;
+    let run_result = injections::with_registered_exports(profile.injections, |exports| {
+        info!(
+            export_count = exports.len(),
+            "injections lifecycle completed"
+        );
+        if let Some(command) = &options.command {
+            let code = run_command(command, exports)?;
+            return Ok(RunResult {
+                exit_code: Some(code),
+            });
+        }
+        print_outputs(exports.to_vec(), options.json, options.strict)?;
+        Ok(RunResult { exit_code: None })
+    })?;
     info!("envlock run completed");
-    Ok(())
+    Ok(run_result)
 }
 
 fn print_outputs(exports: Vec<(String, String)>, as_json: bool, strict: bool) -> Result<()> {
@@ -58,6 +72,33 @@ fn to_env_map(exports: Vec<(String, String)>, strict: bool) -> Result<BTreeMap<S
 
 fn shell_single_quote_escape(input: &str) -> String {
     input.replace('\'', "'\"'\"'")
+}
+
+fn run_command(command: &[String], exports: &[(String, String)]) -> Result<i32> {
+    if command.is_empty() {
+        bail!("command mode requires at least one command token");
+    }
+
+    let mut child = Command::new(&command[0]);
+    if command.len() > 1 {
+        child.args(&command[1..]);
+    }
+    child.envs(exports.iter().map(|(k, v)| (k.as_str(), v.as_str())));
+
+    let status = child.status().context("failed to execute child command")?;
+    if let Some(code) = status.code() {
+        return Ok(code);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        if let Some(signal) = status.signal() {
+            return Ok(128 + signal);
+        }
+    }
+
+    Ok(1)
 }
 
 #[cfg(test)]

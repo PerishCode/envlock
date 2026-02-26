@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process;
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, ValueEnum};
@@ -29,19 +30,31 @@ struct Cli {
 
     #[arg(long = "log-format", default_value = "text", value_enum)]
     log_format: LogFormat,
+
+    #[arg(trailing_var_arg = true)]
+    command: Vec<String>,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     init_logging(cli.log_level, cli.log_format)?;
     let profile_path = resolve_profile_path(&cli)?;
-    run(
+    let result = run(
         &profile_path,
         &RunOptions {
             json: matches!(cli.output, OutputFormat::Json),
             strict: cli.strict,
+            command: if cli.command.is_empty() {
+                None
+            } else {
+                Some(cli.command)
+            },
         },
-    )
+    )?;
+    if let Some(code) = result.exit_code {
+        process::exit(code);
+    }
+    Ok(())
 }
 
 fn resolve_profile_path(cli: &Cli) -> Result<PathBuf> {
@@ -56,7 +69,9 @@ fn resolve_profile_path(cli: &Cli) -> Result<PathBuf> {
         let profile_home = std::env::var("ENVLOCK_PROFILE_HOME")
             .map(PathBuf::from)
             .unwrap_or_else(|_| default_profile_home());
-        return Ok(profile_home.join("profiles").join(format!("{use_name}.json")));
+        return Ok(profile_home
+            .join("profiles")
+            .join(format!("{use_name}.json")));
     }
 
     bail!("one of --profile or --use is required")

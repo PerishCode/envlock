@@ -25,6 +25,7 @@ pub struct Profile {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum InjectionProfile {
     Env(EnvProfile),
+    Command(CommandProfile),
     Symlink(SymlinkProfile),
 }
 
@@ -34,6 +35,49 @@ pub struct EnvProfile {
     pub enabled: bool,
     #[serde(default)]
     pub vars: BTreeMap<String, String>,
+    #[serde(default)]
+    pub ops: Vec<EnvOpProfile>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CommandProfile {
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+    pub program: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(tag = "op", rename_all = "snake_case")]
+pub enum EnvOpProfile {
+    Set {
+        key: String,
+        value: String,
+    },
+    SetIfAbsent {
+        key: String,
+        value: String,
+    },
+    Prepend {
+        key: String,
+        value: String,
+        #[serde(default)]
+        separator: Option<String>,
+        #[serde(default)]
+        dedup: bool,
+    },
+    Append {
+        key: String,
+        value: String,
+        #[serde(default)]
+        separator: Option<String>,
+        #[serde(default)]
+        dedup: bool,
+    },
+    Unset {
+        key: String,
+    },
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -108,6 +152,7 @@ mod tests {
                 assert!(env.enabled);
                 assert_eq!(env.vars.get("A"), Some(&"1".to_string()));
                 assert_eq!(env.vars.get("B"), Some(&"2".to_string()));
+                assert!(env.ops.is_empty());
             }
             _ => panic!("expected env injection"),
         }
@@ -133,5 +178,51 @@ mod tests {
         let err = serde_json::from_str::<Profile>(raw).expect_err("unknown type should fail");
         let msg = err.to_string();
         assert!(msg.contains("unknown variant"));
+    }
+
+    #[test]
+    fn parse_env_ops() {
+        let raw = r#"
+        {
+          "injections": [
+            {
+              "type": "env",
+              "vars": { "A": "1" },
+              "ops": [
+                { "op": "prepend", "key": "PATH", "value": "/opt/bin", "separator": "os", "dedup": true },
+                { "op": "set_if_absent", "key": "NPM_CONFIG_REGISTRY", "value": "https://registry.npmjs.org/" }
+              ]
+            }
+          ]
+        }"#;
+
+        let profile: Profile = serde_json::from_str(raw).expect("profile should parse");
+        match &profile.injections[0] {
+            InjectionProfile::Env(env) => {
+                assert_eq!(env.vars.get("A"), Some(&"1".to_string()));
+                assert_eq!(env.ops.len(), 2);
+            }
+            _ => panic!("expected env injection"),
+        }
+    }
+
+    #[test]
+    fn parse_command_injection() {
+        let raw = r#"
+        {
+          "injections": [
+            { "type": "command", "program": "fnm", "args": ["env", "--shell", "bash"] }
+          ]
+        }"#;
+
+        let profile: Profile = serde_json::from_str(raw).expect("profile should parse");
+        match &profile.injections[0] {
+            InjectionProfile::Command(cmd) => {
+                assert!(cmd.enabled);
+                assert_eq!(cmd.program, "fnm");
+                assert_eq!(cmd.args, vec!["env", "--shell", "bash"]);
+            }
+            _ => panic!("expected command injection"),
+        }
     }
 }

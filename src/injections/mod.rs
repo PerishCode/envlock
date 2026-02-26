@@ -1,3 +1,4 @@
+mod command;
 mod env;
 mod symlink;
 
@@ -5,10 +6,18 @@ use anyhow::{Context, Result, anyhow};
 use tracing::{debug, info};
 
 use crate::profile::InjectionProfile;
+use command::CommandInjection;
 use env::EnvInjection;
 use symlink::SymlinkInjection;
 
 pub fn execute_lifecycle(specs: Vec<InjectionProfile>) -> Result<Vec<(String, String)>> {
+    with_registered_exports(specs, |exports| Ok(exports.to_vec()))
+}
+
+pub fn with_registered_exports<T, F>(specs: Vec<InjectionProfile>, work: F) -> Result<T>
+where
+    F: FnOnce(&[(String, String)]) -> Result<T>,
+{
     let mut injections = build_injections(specs);
     info!(
         injection_count = injections.len(),
@@ -40,15 +49,25 @@ pub fn execute_lifecycle(specs: Vec<InjectionProfile>) -> Result<Vec<(String, St
     }
 
     let export_result = collect_exports(&injections);
+    let work_result = match &export_result {
+        Ok(exports) => Some(work(exports)),
+        Err(_) => None,
+    };
     let shutdown_result = shutdown_registered(&mut injections, registered);
 
-    match (export_result, shutdown_result) {
-        (Ok(exports), Ok(())) => Ok(exports),
-        (Err(err), Ok(())) => Err(err),
-        (Ok(_), Err(shutdown_err)) => Err(shutdown_err),
-        (Err(export_err), Err(shutdown_err)) => Err(anyhow!(
+    match (export_result, work_result, shutdown_result) {
+        (Ok(_), Some(Ok(result)), Ok(())) => Ok(result),
+        (Ok(_), Some(Err(work_err)), Ok(())) => Err(work_err),
+        (Err(err), _, Ok(())) => Err(err),
+        (Ok(_), Some(Ok(_)), Err(shutdown_err)) => Err(shutdown_err),
+        (Ok(_), Some(Err(work_err)), Err(shutdown_err)) => {
+            Err(anyhow!("{work_err}; also failed shutdown: {shutdown_err}"))
+        }
+        (Err(export_err), _, Err(shutdown_err)) => Err(anyhow!(
             "{export_err}; also failed shutdown: {shutdown_err}"
         )),
+        (Ok(_), None, Ok(())) => Err(anyhow!("internal lifecycle error: missing work result")),
+        (Ok(_), None, Err(shutdown_err)) => Err(shutdown_err),
     }
 }
 
@@ -96,6 +115,9 @@ fn build_injections(specs: Vec<InjectionProfile>) -> Vec<RuntimeInjection> {
             InjectionProfile::Env(cfg) if cfg.enabled => {
                 injections.push(RuntimeInjection::Env(EnvInjection::new(cfg)));
             }
+            InjectionProfile::Command(cfg) if cfg.enabled => {
+                injections.push(RuntimeInjection::Command(CommandInjection::new(cfg)));
+            }
             InjectionProfile::Symlink(cfg) if cfg.enabled => {
                 injections.push(RuntimeInjection::Symlink(SymlinkInjection::new(cfg)));
             }
@@ -111,6 +133,7 @@ fn build_injections(specs: Vec<InjectionProfile>) -> Vec<RuntimeInjection> {
 
 enum RuntimeInjection {
     Env(EnvInjection),
+    Command(CommandInjection),
     Symlink(SymlinkInjection),
 }
 
@@ -118,6 +141,7 @@ impl RuntimeInjection {
     fn name(&self) -> &'static str {
         match self {
             Self::Env(inner) => inner.name(),
+            Self::Command(inner) => inner.name(),
             Self::Symlink(inner) => inner.name(),
         }
     }
@@ -125,6 +149,7 @@ impl RuntimeInjection {
     fn validate(&self) -> Result<()> {
         match self {
             Self::Env(inner) => inner.validate(),
+            Self::Command(inner) => inner.validate(),
             Self::Symlink(inner) => inner.validate(),
         }
     }
@@ -132,6 +157,7 @@ impl RuntimeInjection {
     fn register(&mut self) -> Result<()> {
         match self {
             Self::Env(inner) => inner.register(),
+            Self::Command(inner) => inner.register(),
             Self::Symlink(inner) => inner.register(),
         }
     }
@@ -139,6 +165,7 @@ impl RuntimeInjection {
     fn export(&self) -> Result<Vec<(String, String)>> {
         match self {
             Self::Env(inner) => inner.export(),
+            Self::Command(inner) => inner.export(),
             Self::Symlink(inner) => inner.export(),
         }
     }
@@ -146,6 +173,7 @@ impl RuntimeInjection {
     fn shutdown(&mut self) -> Result<()> {
         match self {
             Self::Env(inner) => inner.shutdown(),
+            Self::Command(inner) => inner.shutdown(),
             Self::Symlink(inner) => inner.shutdown(),
         }
     }
@@ -162,10 +190,12 @@ mod tests {
             InjectionProfile::Env(crate::profile::EnvProfile {
                 enabled: false,
                 vars: BTreeMap::from([("A".to_string(), "1".to_string())]),
+                ops: Vec::new(),
             }),
             InjectionProfile::Env(crate::profile::EnvProfile {
                 enabled: true,
                 vars: BTreeMap::from([("B".to_string(), "2".to_string())]),
+                ops: Vec::new(),
             }),
         ];
 
@@ -179,9 +209,26 @@ mod tests {
         let specs = vec![InjectionProfile::Env(crate::profile::EnvProfile {
             enabled: true,
             vars: BTreeMap::from([("   ".to_string(), "1".to_string())]),
+            ops: Vec::new(),
         })];
 
         let err = execute_lifecycle(specs).expect_err("empty env key should fail");
         assert!(err.to_string().contains("validation failed"));
+    }
+
+    #[test]
+    fn command_injection_exports_values() {
+        let specs = vec![InjectionProfile::Command(crate::profile::CommandProfile {
+            enabled: true,
+            program: "bash".to_string(),
+            args: vec![
+                "-lc".to_string(),
+                "printf \"export CMD_A='1'\\nCMD_B=2\\n\"".to_string(),
+            ],
+        })];
+
+        let exports = execute_lifecycle(specs).expect("command lifecycle should pass");
+        assert!(exports.contains(&("CMD_A".to_string(), "1".to_string())));
+        assert!(exports.contains(&("CMD_B".to_string(), "2".to_string())));
     }
 }
