@@ -133,12 +133,23 @@ jobs:
             dist/checksums.txt
             dist/tap/*.env
 
+      - name: Detect tap token
+        id: tap_token
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [[ -n "${HOMEBREW_TAP_TOKEN}" ]]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Checkout release repo for scripts
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        if: ${{ steps.tap_token.outputs.enabled == 'true' }}
         uses: actions/checkout@v4
 
       - name: Sync Homebrew tap
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        if: ${{ steps.tap_token.outputs.enabled == 'true' }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ github.ref_name }}
