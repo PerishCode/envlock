@@ -1,86 +1,76 @@
 # envlock
 
-`envlock` is a config-driven environment session builder.
-
-In v1, it reads a JSON config file and prints shell `export` statements from configured injections.
-It also supports machine-readable JSON output with `--json`.
+`envlock` reads a JSON profile and prints environment exports for your shell.
 
 ## Quick Start
 
-1. Build or run directly:
+Run with sample profile:
 
 ```bash
-cargo run -- -c examples/envlock.sample.json
+cargo run -- -p examples/envlock.sample.json
 ```
 
-2. Apply exports in your shell:
+Apply variables to current shell:
 
 ```bash
-eval "$(cargo run --quiet -- -c examples/envlock.sample.json)"
+eval "$(cargo run --quiet -- -p examples/envlock.sample.json)"
 ```
 
 ## CLI
 
 ```bash
-envlock -c <path-to-config.json>
+envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [--strict]
 ```
 
-- `-c, --config`: JSON config path.
-- `--json`: Print merged environment values as a JSON object instead of shell `export` lines.
-- `--strict`: Fail if two injections export the same key.
+- `-p, --profile`: JSON profile file path.
+- `--use <profile>`: load profile from `ENVLOCK_PROFILE_HOME/profiles/<profile>.json`.
+  If `ENVLOCK_PROFILE_HOME` is unset, default is `~/.envlock`.
+- `--output <shell|json>`: choose output mode (`shell` by default).
+- `--strict`: fail on duplicate exported keys.
+- `--log-level <error|warn|info|debug|trace>`: set log verbosity (default: `warn`).
+- `--log-format <text|json>`: set log format (default: `text`).
 
-## Config Shape
-
-Top-level JSON:
+## Profile Format
 
 ```json
 {
   "injections": [
-    { "type": "node", "enabled": true, "version": "22.11.0", "npm_registry": "https://registry.npmjs.org" },
-    { "type": "kube", "enabled": true, "context": "dev-cluster", "namespace": "platform" },
-    { "type": "codex", "enabled": true }
+    {
+      "type": "env",
+      "enabled": true,
+      "vars": {
+        "ENVLOCK_PROFILE": "dev",
+        "ENVLOCK_NODE_VERSION": "22.11.0",
+        "NPM_CONFIG_REGISTRY": "https://registry.npmjs.org",
+        "KUBECONFIG_CONTEXT": "dev-cluster",
+        "KUBECONFIG_NAMESPACE": "platform"
+      }
+    },
+    {
+      "type": "symlink",
+      "enabled": false,
+      "source": "~/.config/codex-agents.md",
+      "target": "~/.codex/AGENTS.md",
+      "on_exist": "error",
+      "cleanup": true
+    }
   ]
 }
 ```
 
-Supported injection types:
+## Output
 
-- `node`
-- `kube`
-- `codex` (placeholder/no-op in v1)
-
-Notes:
-
-- `enabled` defaults to `true`.
-- Empty string values for `node.version`, `node.npm_registry`, `kube.context`, `kube.namespace` fail validation.
-- Runtime order is fixed: `validate -> register -> export -> shutdown`.
-- By default, duplicate export keys are resolved with last-write-wins; with `--strict`, duplicates are rejected.
-
-## Output Contract
-
-Current export keys:
-
-- `node.version` -> `ENVLOCK_NODE_VERSION`
-- `node.npm_registry` -> `NPM_CONFIG_REGISTRY`
-- `kube.context` -> `KUBECONFIG_CONTEXT`
-- `kube.namespace` -> `KUBECONFIG_NAMESPACE`
-
-The output is shell-ready:
+Default output is shell exports:
 
 ```bash
 export ENVLOCK_NODE_VERSION='22.11.0'
+export NPM_CONFIG_REGISTRY='https://registry.npmjs.org'
 export KUBECONFIG_CONTEXT='dev-cluster'
-...
+export KUBECONFIG_NAMESPACE='platform'
 ```
 
-JSON mode:
+JSON output:
 
 ```bash
-cargo run --quiet -- -c examples/envlock.sample.json --json
+cargo run --quiet -- -p examples/envlock.sample.json --output json
 ```
-
-## Current Scope (v1)
-
-- Environment management only.
-- No command execution orchestration.
-- `codex` injection is a no-op placeholder.

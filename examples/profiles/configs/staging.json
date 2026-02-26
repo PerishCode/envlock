@@ -1,0 +1,17 @@
+{
+  "injections": [
+    {
+      "type": "env",
+      "enabled": true,
+      "vars": {
+        "ENVLOCK_PROFILE": "staging",
+        "ENVLOCK_NODE_VERSION": "22.11.0",
+        "FNM_VERSION_FILE_STRATEGY": "recursive",
+        "FNM_NODE_DIST_MIRROR": "https://npmmirror.com/mirrors/node",
+        "NPM_CONFIG_REGISTRY": "https://registry.npmmirror.com",
+        "KUBECONFIG_CONTEXT": "staging-cluster",
+        "KUBECONFIG_NAMESPACE": "platform-staging"
+      }
+    }
+  ]
+}

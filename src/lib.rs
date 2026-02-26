@@ -1,38 +1,40 @@
-mod config;
-mod injection;
+pub mod profile;
+pub mod injections;
 
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{collections::BTreeMap, path::Path};
 
 use anyhow::{Context, Result, bail};
-use clap::Parser;
+use tracing::{debug, info};
 
-#[derive(Debug, Parser)]
-#[command(
-    name = "envlock",
-    version,
-    about = "Build environment sessions from JSON config"
-)]
-struct Cli {
-    #[arg(short = 'c', long = "config")]
-    config: PathBuf,
-
-    #[arg(long = "json")]
-    json: bool,
-
-    #[arg(long = "strict")]
-    strict: bool,
+pub struct RunOptions {
+    pub json: bool,
+    pub strict: bool,
 }
 
-fn main() -> Result<()> {
-    let cli = Cli::parse();
-    let cfg = config::load(&cli.config).context("unable to load envlock config")?;
-    let exports = injection::execute_lifecycle(cfg.injections)?;
-    print_outputs(exports, cli.json, cli.strict)?;
+pub fn run(profile_path: &Path, options: &RunOptions) -> Result<()> {
+    info!(
+        profile_path = %profile_path.display(),
+        json = options.json,
+        strict = options.strict,
+        "envlock run started"
+    );
+    let profile = profile::load(profile_path).context("unable to load envlock profile")?;
+    let exports = injections::execute_lifecycle(profile.injections)?;
+    info!(
+        export_count = exports.len(),
+        "injections lifecycle completed"
+    );
+    print_outputs(exports, options.json, options.strict)?;
+    info!("envlock run completed");
     Ok(())
 }
 
 fn print_outputs(exports: Vec<(String, String)>, as_json: bool, strict: bool) -> Result<()> {
     let env = to_env_map(exports, strict)?;
+    debug!(
+        output_mode = if as_json { "json" } else { "shell" },
+        "rendering output"
+    );
     if as_json {
         println!("{}", serde_json::to_string_pretty(&env)?);
     } else {

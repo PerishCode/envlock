@@ -1,0 +1,18 @@
+{
+  "injections": [
+    {
+      "type": "env",
+      "enabled": true,
+      "vars": {
+        "ENVLOCK_PROFILE": "prod-readonly",
+        "ENVLOCK_NODE_VERSION": "22.11.0",
+        "FNM_VERSION_FILE_STRATEGY": "local",
+        "FNM_NODE_DIST_MIRROR": "https://nodejs.org/dist",
+        "NPM_CONFIG_REGISTRY": "https://registry.npmjs.org",
+        "KUBECONFIG_CONTEXT": "prod-cluster",
+        "KUBECONFIG_NAMESPACE": "platform",
+        "KUBECTL_COMMAND_MODE": "readonly"
+      }
+    }
+  ]
+}

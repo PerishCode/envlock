@@ -1,20 +1,23 @@
 {
   "injections": [
     {
-      "type": "node",
+      "type": "env",
       "enabled": true,
-      "version": "22.11.0",
-      "npm_registry": "https://registry.npmjs.org"
+      "vars": {
+        "ENVLOCK_PROFILE": "dev",
+        "ENVLOCK_NODE_VERSION": "22.11.0",
+        "NPM_CONFIG_REGISTRY": "https://registry.npmjs.org",
+        "KUBECONFIG_CONTEXT": "dev-cluster",
+        "KUBECONFIG_NAMESPACE": "platform"
+      }
     },
     {
-      "type": "kube",
-      "enabled": true,
-      "context": "dev-cluster",
-      "namespace": "platform"
-    },
-    {
-      "type": "codex",
-      "enabled": true
+      "type": "symlink",
+      "enabled": false,
+      "source": "~/.config/codex-agents.md",
+      "target": "~/.codex/AGENTS.md",
+      "on_exist": "error",
+      "cleanup": true
     }
   ]
 }

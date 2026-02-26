@@ -1,23 +1,22 @@
-# Phase: 1.1 - Bootstrap and Architecture Freeze
+# Phase: 1.1 - Bootstrap local end-to-end verification
 
 ## Objective
-Initialize `.task` tracking for `envlock` and freeze the agreed v1 architecture boundaries so the next session can start implementation without re-discussion.
+Define the local E2E validation boundary and complete an initial executable verification pass.
 
 ## Exit Criteria
-- [x] `.task` initialized from shared templates on a non-`main` branch.
-- [x] Final architecture constraints documented and aligned with user decisions.
+- [x] E2E validation scope and command set are documented for this task.
+- [x] At least one baseline local E2E verification run is executed with results captured.
 
 ## Work Log
-- [2026-02-26 10:19:55 +0800] @ZQXY123deMacBook-Pro.local: Phase initialized.
-- [2026-02-26 10:19:55 +0800] Bootstrapped on branch `feat/envlock-bootstrap`.
-- [2026-02-26 10:19:55 +0800] Confirmed `envlock` naming.
-- [2026-02-26 10:19:55 +0800] Confirmed strict scope: environment management only.
-- [2026-02-26 10:19:55 +0800] Confirmed JSON-first config (`-c <path>`), `injections` as primary extension surface.
-- [2026-02-26 10:19:55 +0800] Confirmed lifecycle: `validate -> register -> export -> shutdown`.
-- [2026-02-26 10:19:55 +0800] Confirmed v1 injection keys: `node`, `kube`, `codex` (placeholder/no-op).
+- [2026-02-26 13:45:46 +0800] @ZQXY123deMacBook-Pro.local: Phase initialized.
+- [2026-02-26 13:45:46 +0800] New task bootstrap completed with fresh branch-bound `.task` state.
+- [2026-02-26 13:58:40 +0800] Added local profile configs for `local-dev`, `staging`, and `prod-readonly` under `examples/profiles/configs/`.
+- [2026-02-26 13:58:55 +0800] Verified `--use <profile> --output json` for all profiles with expected exported key sets.
+- [2026-02-26 13:59:05 +0800] Verified shell `eval "$(envlock --use <profile>)"` behavior in subshell and checked fnm+kube vars.
+- [2026-02-26 13:59:10 +0800] Marked phase complete.
 
 ## Technical Notes
-- **Files Touched:** `.task/MAIN.md`, `.task/PHASE_1.1.md`
+- **Files Touched:** `.task/MAIN.md`, `.task/PHASE_1.1.md`, `examples/profiles/configs/local-dev.json`, `examples/profiles/configs/staging.json`, `examples/profiles/configs/prod-readonly.json`
 - **New Dependencies:** none
 - **Blockers:** none
 
