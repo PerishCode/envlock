@@ -58,6 +58,7 @@ envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 
 `env` values also support `resource://` URI expansion:
 - `resource://...` resolves against `ENVLOCK_RESOURCE_HOME`
+- `resource-content://...` reads file content from `ENVLOCK_RESOURCE_HOME` and injects it as the variable value
 - default resource home is `~/.envlock/resources` when `ENVLOCK_RESOURCE_HOME` is unset
 
 Boundary:
