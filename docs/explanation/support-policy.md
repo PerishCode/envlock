@@ -2,7 +2,7 @@
 
 Current support target:
 
-- `>= 0.1.7`
+- `>= 0.1.8`
 
 Upgrade guidance:
 

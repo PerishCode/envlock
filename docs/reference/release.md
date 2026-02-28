@@ -20,6 +20,6 @@
 
 ```bash
 # after merging changes and bumping Cargo.toml version
-git tag v0.1.7
-git push origin v0.1.7
+git tag v0.1.8
+git push origin v0.1.8
 ```

@@ -33,6 +33,7 @@ eval "$(cargo run --quiet -- -p examples/envlock.sample.json)"
 
 ```bash
 envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [--strict] [-- <cmd...>]
+envlock preview --profile <path-to-profile.json> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 ```
 
@@ -44,6 +45,10 @@ envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 - `-- <cmd...>`: run a command with injected env in-process, and return the child exit code.
 - `--log-level <error|warn|info|debug|trace>`: set log verbosity (default: `warn`).
 - `--log-format <text|json>`: set log format (default: `text`).
+- `preview`: read-only profile inspection without executing injections.
+  - `--profile`: profile file to inspect.
+  - `--output <text|json>`: preview rendering mode (`text` by default).
+  - security boundary: preview only exposes metadata (for example env keys, command arg count), not sensitive values.
 - `self-update`: built-in updater for GitHub Release binaries.
   - `--check`: only check whether an update is available.
   - `--version`: upgrade to a specific release tag/version.

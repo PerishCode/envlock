@@ -4,6 +4,7 @@
 
 ```bash
 envlock (-p <path> | --use <name>) [--output <shell|json>] [--strict] [-- <cmd...>]
+envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 ```
 
@@ -26,6 +27,19 @@ envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 | `--check` | Check availability only; no install. |
 | `--version <x.y.z|vX.Y.Z>` | Install exact release version. |
 | `-y, --yes` | Skip confirmation prompt. |
+
+## `preview` Options
+
+| Option | Description |
+| --- | --- |
+| `-p, --profile <path>` | Explicit JSON profile path to inspect. |
+| `--output <text|json>` | Preview format, default `text`. |
+
+`preview` is read-only and does not execute injections. It exposes metadata only:
+
+- `env`: key names only.
+- `command`: program and argument count only.
+- `symlink`: path metadata only.
 
 ## Exit Behavior
 

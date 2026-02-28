@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use envlock::app::{App, AppContext};
 use envlock::config::{CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig};
+use envlock::preview::{PreviewOutputMode, run as run_preview};
 use envlock::run;
 use envlock::self_update::{SelfUpdateOptions, run as run_self_update};
 use tracing_subscriber::{EnvFilter, prelude::*};
@@ -13,7 +14,8 @@ use tracing_subscriber::{EnvFilter, prelude::*};
 #[command(
     name = "envlock",
     version,
-    about = "Build environment sessions from JSON profile"
+    about = "Build environment sessions from JSON profile",
+    after_help = "Docs: https://perishcode.github.io/envlock/"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -26,6 +28,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     SelfUpdate(SelfUpdateArgs),
+    Preview(PreviewArgs),
 }
 
 #[derive(Debug, Args)]
@@ -38,6 +41,15 @@ struct SelfUpdateArgs {
 
     #[arg(long = "yes", short = 'y')]
     yes: bool,
+}
+
+#[derive(Debug, Args)]
+struct PreviewArgs {
+    #[arg(short = 'p', long = "profile")]
+    profile: PathBuf,
+
+    #[arg(long = "output", default_value = "text", value_enum)]
+    output: PreviewOutputFormat,
 }
 
 #[derive(Debug, Args)]
@@ -66,12 +78,21 @@ struct RunArgs {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    if let Some(Commands::SelfUpdate(args)) = cli.subcommand {
-        return run_self_update(SelfUpdateOptions {
-            check_only: args.check,
-            version: args.version,
-            yes: args.yes,
-        });
+    if let Some(command) = cli.subcommand {
+        return match command {
+            Commands::SelfUpdate(args) => run_self_update(SelfUpdateOptions {
+                check_only: args.check,
+                version: args.version,
+                yes: args.yes,
+            }),
+            Commands::Preview(args) => run_preview(
+                &args.profile,
+                match args.output {
+                    PreviewOutputFormat::Text => PreviewOutputMode::Text,
+                    PreviewOutputFormat::Json => PreviewOutputMode::Json,
+                },
+            ),
+        };
     }
 
     let config = RuntimeConfig::from_cli_and_env(
@@ -130,6 +151,12 @@ impl From<LogLevel> for tracing_subscriber::filter::LevelFilter {
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum LogFormat {
+    Text,
+    Json,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum PreviewOutputFormat {
     Text,
     Json,
 }

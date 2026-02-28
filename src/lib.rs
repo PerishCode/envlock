@@ -1,6 +1,7 @@
 pub mod app;
 pub mod config;
 pub mod injections;
+pub mod preview;
 pub mod profile;
 pub mod self_update;
 
