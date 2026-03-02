@@ -4,15 +4,16 @@
 
 | Variable | Purpose |
 | --- | --- |
-| `ENVLOCK_PROFILE_HOME` | Base directory for `--use` profile lookup (`profiles/<name>.json`). |
+| `ENVLOCK_HOME` | Base directory for default profile resolution (`profiles/default.json`). |
 | `ENVLOCK_RESOURCE_HOME` | Base directory for `resource://` and `resource-content://`. |
 | `HOME` | Fallback base for default profile/resource directories. |
 
 ## Default Paths
 
-When `ENVLOCK_PROFILE_HOME` is unset:
+When `ENVLOCK_HOME` is unset:
 
-- profile home: `~/.envlock`
+- envlock home: `~/.envlock`
+- default profile: `~/.envlock/profiles/default.json`
 
 When `ENVLOCK_RESOURCE_HOME` is unset:
 

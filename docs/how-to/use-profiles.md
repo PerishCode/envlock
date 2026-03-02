@@ -1,6 +1,6 @@
 # Use Profiles
 
-`envlock` supports two profile selection modes.
+`envlock` supports convention-first resolution with explicit override.
 
 ## Mode A: Explicit Path
 
@@ -10,16 +10,16 @@ envlock -p ./profiles/dev.json
 
 Use this when your profile lives next to a project.
 
-## Mode B: Named Profile with `--use`
+## Mode B: Convention Default Profile
 
 ```bash
-envlock --use dev
+envlock
 ```
 
 Lookup behavior:
 
-1. If `ENVLOCK_PROFILE_HOME` is set, resolve from `$ENVLOCK_PROFILE_HOME/profiles/<name>.json`.
-2. Otherwise resolve from `~/.envlock/profiles/<name>.json`.
+1. If `ENVLOCK_HOME` is set, resolve from `$ENVLOCK_HOME/profiles/default.json`.
+2. Otherwise resolve from `~/.envlock/profiles/default.json`.
 
 ## Useful Flags
 

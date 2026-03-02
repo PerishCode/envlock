@@ -26,5 +26,5 @@ These are not shell-expanded by envlock.
 
 1. Run `envlock ... --output json` to inspect final map.
 2. Add `--log-level debug` for lifecycle logs.
-3. Confirm profile path resolution (`-p` vs `--use`).
+3. Confirm profile path resolution (`--profile` vs default profile under `ENVLOCK_HOME`).
 4. Confirm resource root via `ENVLOCK_RESOURCE_HOME`.

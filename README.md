@@ -29,17 +29,26 @@ Apply variables to current shell:
 eval "$(cargo run --quiet -- -p examples/envlock.sample.json)"
 ```
 
+## Linux Container Smoke
+
+Use one-shot Linux container smoke checks (low-cost robustness validation):
+
+```bash
+scripts/e2e-smoke.sh smoke
+```
+
 ## CLI
 
 ```bash
-envlock (-p <path-to-profile.json> | --use <profile>) [--output <shell|json>] [--strict] [-- <cmd...>]
+envlock [--profile <path-to-profile.json>] [--output <shell|json>] [--strict] [-- <cmd...>]
 envlock preview --profile <path-to-profile.json> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 ```
 
 - `-p, --profile`: JSON profile file path.
-- `--use <profile>`: load profile from `ENVLOCK_PROFILE_HOME/profiles/<profile>.json`.
-  If `ENVLOCK_PROFILE_HOME` is unset, default is `~/.envlock`.
+- default profile resolution (when `--profile` is omitted):
+  - `ENVLOCK_HOME/profiles/default.json` if `ENVLOCK_HOME` is set
+  - `~/.envlock/profiles/default.json` otherwise
 - `--output <shell|json>`: choose output mode (`shell` by default).
 - `--strict`: fail on duplicate exported keys.
 - `-- <cmd...>`: run a command with injected env in-process, and return the child exit code.

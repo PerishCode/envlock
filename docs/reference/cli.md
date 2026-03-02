@@ -3,7 +3,7 @@
 ## Command Forms
 
 ```bash
-envlock (-p <path> | --use <name>) [--output <shell|json>] [--strict] [-- <cmd...>]
+envlock [--profile <path>] [--output <shell|json>] [--strict] [-- <cmd...>]
 envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 ```
@@ -13,12 +13,16 @@ envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 | Option | Description |
 | --- | --- |
 | `-p, --profile <path>` | Explicit JSON profile path. |
-| `--use <name>` | Named profile under `ENVLOCK_PROFILE_HOME/profiles`. |
 | `--output <shell|json>` | Output mode, default `shell`. |
 | `--strict` | Fail on duplicate keys in final output. |
 | `--log-level <error|warn|info|debug|trace>` | Logging level, default `warn`. |
 | `--log-format <text|json>` | Logging format, default `text`. |
 | `-- <cmd...>` | Run child command with injected env and return child exit code. |
+
+When `--profile` is omitted, envlock resolves:
+
+- `$ENVLOCK_HOME/profiles/default.json` if `ENVLOCK_HOME` is set.
+- `~/.envlock/profiles/default.json` otherwise.
 
 ## `self-update` Options
 

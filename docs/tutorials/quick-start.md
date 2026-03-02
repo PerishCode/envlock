@@ -70,5 +70,5 @@ This prints `quickstart` without mutating your parent shell.
 
 ## Next
 
-- Learn profile resolution with `--use` in [Use Profiles](/how-to/use-profiles).
+- Learn default profile resolution in [Use Profiles](/how-to/use-profiles).
 - Review all options in [CLI Reference](/reference/cli).

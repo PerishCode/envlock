@@ -234,7 +234,7 @@ mod tests {
                     log_level: LevelFilter::WARN,
                     log_format: LogFormat::Text,
                     command: None,
-                    profile_home: PathBuf::from("/tmp/profile-home"),
+                    envlock_home: PathBuf::from("/tmp/envlock-home"),
                     resource_home: PathBuf::from("/tmp/envlock-res"),
                 },
                 env: TestEnv,

@@ -57,9 +57,6 @@ struct RunArgs {
     #[arg(short = 'p', long = "profile")]
     profile: Option<PathBuf>,
 
-    #[arg(long = "use")]
-    use_name: Option<String>,
-
     #[arg(long = "output", default_value = "shell", value_enum)]
     output: OutputFormat,
 
@@ -98,7 +95,6 @@ fn main() -> Result<()> {
     let config = RuntimeConfig::from_cli_and_env(
         CliInput {
             profile: cli.run_args.profile,
-            use_name: cli.run_args.use_name,
             output_mode: match cli.run_args.output {
                 OutputFormat::Shell => OutputMode::Shell,
                 OutputFormat::Json => OutputMode::Json,
