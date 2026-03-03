@@ -55,7 +55,7 @@ envlock self-update
 - 快速开始：[docs/tutorials/quick-start.md](docs/tutorials/quick-start.md)
 - 安装指南：[docs/how-to/install.md](docs/how-to/install.md)
 - 快速参考（中文）：[docs/zh-CN/reference/quick-reference.md](docs/zh-CN/reference/quick-reference.md)
-- 常用配方（中文）：[docs/zh-CN/how-to/common-recipes.md](docs/zh-CN/how-to/common-recipes.md)
+- 常见用法（中文）：[docs/zh-CN/how-to/common-recipes.md](docs/zh-CN/how-to/common-recipes.md)
 - CI 集成（中文）：[docs/zh-CN/how-to/ci-integration.md](docs/zh-CN/how-to/ci-integration.md)
 - CLI 参考：[docs/reference/cli.md](docs/reference/cli.md)
 - FAQ（中文）：[docs/zh-CN/explanation/faq.md](docs/zh-CN/explanation/faq.md)
@@ -72,7 +72,7 @@ scripts/converge-check.sh
 bash scripts/release-smoke.sh --version v0.2.1
 ```
 
-## 故障排查快路径
+## 故障排查（快速定位）
 
 提交 issue 前，先执行这 3 条命令：
 
@@ -84,7 +84,7 @@ envlock --profile "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json" --outp
 
 如果命令失败，请把命令和完整输出一起贴到 issue。
 
-## 项目信号
+## 项目链接
 
 - Releases：https://github.com/PerishCode/envlock/releases
 - 变更记录：https://github.com/PerishCode/envlock/releases

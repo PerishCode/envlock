@@ -1,6 +1,6 @@
 # CLI 参考
 
-## 命令形式
+## 命令语法
 
 ```bash
 envlock [--profile <path>] [--output <shell|json>] [--strict] [-- <cmd...>]
@@ -8,7 +8,7 @@ envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 ```
 
-## run 常用选项
+## 主命令常用选项
 
 - `-p, --profile <path>`：显式指定 profile JSON 路径
 - `--output <shell|json>`：输出模式，默认 `shell`

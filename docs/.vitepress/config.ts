@@ -64,10 +64,10 @@ export default defineConfig({
           items: [
             { text: "首页", link: "/zh-CN/" },
             { text: "安装", link: "/zh-CN/how-to/install" },
-             { text: "常用配方", link: "/zh-CN/how-to/common-recipes" },
+             { text: "常见用法", link: "/zh-CN/how-to/common-recipes" },
              { text: "CI 集成", link: "/zh-CN/how-to/ci-integration" },
              { text: "发布验证", link: "/zh-CN/how-to/release-validation" },
-             { text: "发布操作手册", link: "/zh-CN/how-to/release-operator-playbook" },
+             { text: "发布操作指南", link: "/zh-CN/how-to/release-operator-playbook" },
              { text: "快速参考", link: "/zh-CN/reference/quick-reference" },
              { text: "CLI 参考", link: "/zh-CN/reference/cli" },
             { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" },
@@ -78,14 +78,14 @@ export default defineConfig({
     },
     outline: {
       level: [2, 3],
-      label: "On this page"
+      label: "本页导航"
     },
     search: {
       provider: "local"
     },
     editLink: {
       pattern: "https://github.com/PerishCode/envlock/edit/main/docs/:path",
-      text: "Edit this page on GitHub"
+      text: "在 GitHub 上编辑此页"
     },
     socialLinks: [{ icon: "github", link: "https://github.com/PerishCode/envlock" }],
     footer: {
