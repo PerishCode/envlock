@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::profile::{EnvOpProfile, InjectionProfile};
+use crate::core::profile::{EnvOpProfile, InjectionProfile};
 
 #[derive(Debug, Clone, Copy)]
 pub enum PreviewOutputMode {
@@ -40,7 +40,7 @@ enum PreviewInjection {
 }
 
 pub fn run(profile_path: &Path, output_mode: PreviewOutputMode) -> Result<()> {
-    let profile = crate::profile::load(profile_path)?;
+    let profile = crate::core::profile::load(profile_path)?;
     let injections = profile
         .injections
         .into_iter()

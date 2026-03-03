@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::{Result, bail};
 
-use crate::profile::{SymlinkOnExist, SymlinkProfile};
+use crate::core::profile::{SymlinkOnExist, SymlinkProfile};
 
 pub(crate) struct SymlinkInjection {
     cfg: SymlinkProfile,

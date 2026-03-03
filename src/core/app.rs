@@ -2,7 +2,7 @@ use std::process::{Command, Output};
 
 use anyhow::{Context, Result};
 
-use crate::config::RuntimeConfig;
+use super::config::RuntimeConfig;
 
 pub trait EnvReader: Send + Sync {
     fn var(&self, key: &str) -> Option<String>;

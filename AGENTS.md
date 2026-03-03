@@ -3,8 +3,8 @@
 ## Directory Conventions
 
 - `src/bin/envlock.rs`: CLI entrypoint.
-- `src/profile.rs`: JSON profile schema and parsing.
-- `src/injections/`: injection implementations.
+- `src/core/`: core runtime modules (`app`, `config`, `profile`, `injections`, `runtime`).
+- `src/commands/`: concrete subcommand implementations (`preview`, `self_update`).
 - `examples/`: runnable sample profiles.
 - `target/`: local build outputs (generated, do not hand-edit).
 - `.task/`: branch-bound task state for development workflow, must not stay on `main`.
