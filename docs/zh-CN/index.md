@@ -6,6 +6,9 @@ hero:
   name: envlock
   text: 可复现的环境会话
   tagline: 用一个 JSON profile 为 shell 或子命令注入可预测、可验证的环境变量。
+  image:
+    src: /hero-shell.svg
+    alt: envlock shell quick verify
   actions:
     - theme: brand
       text: 快速开始
@@ -37,6 +40,14 @@ features:
 [![Latest Release](https://img.shields.io/github/v/release/PerishCode/envlock?sort=semver)](https://github.com/PerishCode/envlock/releases)
 
 </div>
+
+## 冷启动验证
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh
+eval "$(envlock)"
+echo "$ENVLOCK_PROFILE"
+```
 
 ## 快速入口
 

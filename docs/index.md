@@ -6,6 +6,9 @@ hero:
   name: envlock
   text: Deterministic Environment Sessions
   tagline: Build reproducible shell and command environments from one JSON profile.
+  image:
+    src: /hero-shell.svg
+    alt: envlock shell quick verify
   actions:
     - theme: brand
       text: Quick Start
@@ -37,6 +40,14 @@ features:
 [![Latest Release](https://img.shields.io/github/v/release/PerishCode/envlock?sort=semver)](https://github.com/PerishCode/envlock/releases)
 
 </div>
+
+## Cold Start Verify
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh
+eval "$(envlock)"
+echo "$ENVLOCK_PROFILE"
+```
 
 ## Information Model
 
