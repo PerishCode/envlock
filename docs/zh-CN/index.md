@@ -1,6 +1,31 @@
-# envlock 文档（简体中文）
-
-`envlock` 用一个 JSON profile 为 shell 或子命令注入可复现的环境变量。
+---
+layout: home
+title: envlock 文档（简体中文）
+titleTemplate: false
+hero:
+  name: envlock
+  text: 可复现的环境会话
+  tagline: 用一个 JSON profile 为 shell 或子命令注入可预测、可验证的环境变量。
+  actions:
+    - theme: brand
+      text: 快速开始
+      link: /tutorials/quick-start
+    - theme: alt
+      text: Profile 参考
+      link: /reference/profile
+    - theme: alt
+      text: CLI 参考
+      link: /zh-CN/reference/cli
+features:
+  - title: 可组合注入
+    details: 在同一个 profile 中组合 env、command、symlink 注入，减少手工步骤。
+  - title: 默认安全
+    details: 以用户目录为默认作用域，输出模式明确可控。
+  - title: 易于脚本化
+    details: 按需选择 shell 导出、JSON 输出或 command 模式，便于接入流水线。
+  - title: 发布可验证
+    details: 提供 self-update 与基于标签的发布流程，便于稳定分发。
+---
 
 ## GitHub 状态
 

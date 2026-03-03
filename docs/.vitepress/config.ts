@@ -1,28 +1,73 @@
 import { defineConfig } from "vitepress";
 
+const BASE = "/envlock/";
+
 export default defineConfig({
   title: "envlock",
   description: "Deterministic environment sessions from JSON profiles.",
-  base: "/envlock/",
-  head: [["link", { rel: "icon", type: "image/png", href: "/favicon.png" }]],
+  base: BASE,
+  head: [["link", { rel: "icon", type: "image/png", href: `${BASE}favicon.png` }]],
   cleanUrls: true,
   lastUpdated: true,
+  locales: {
+    root: {
+      lang: "en-US",
+      label: "English",
+      link: "/",
+      title: "envlock",
+      description: "Deterministic environment sessions from JSON profiles.",
+      themeConfig: {
+        nav: [
+          { text: "Tutorial", link: "/tutorials/quick-start" },
+          { text: "How-to", link: "/how-to/install" },
+          { text: "Reference", link: "/reference/cli" },
+          { text: "Explanation", link: "/explanation/design-boundaries" },
+          { text: "GitHub", link: "https://github.com/PerishCode/envlock" }
+        ],
+        outline: {
+          level: [2, 3],
+          label: "On this page"
+        },
+        editLink: {
+          pattern: "https://github.com/PerishCode/envlock/edit/main/docs/:path",
+          text: "Edit this page on GitHub"
+        },
+        localeLinks: {
+          text: "Language"
+        }
+      }
+    },
+    "zh-CN": {
+      lang: "zh-CN",
+      label: "简体中文",
+      link: "/zh-CN/",
+      title: "envlock",
+      description: "通过 JSON 配置实现可复现环境会话。",
+      themeConfig: {
+        nav: [
+          { text: "教程", link: "/tutorials/quick-start" },
+          { text: "操作指南", link: "/zh-CN/how-to/install" },
+          { text: "参考", link: "/zh-CN/reference/cli" },
+          { text: "说明", link: "/zh-CN/explanation/faq" },
+          { text: "GitHub", link: "https://github.com/PerishCode/envlock" }
+        ],
+        outline: {
+          level: [2, 3],
+          label: "本页导航"
+        },
+        editLink: {
+          pattern: "https://github.com/PerishCode/envlock/edit/main/docs/:path",
+          text: "在 GitHub 上编辑此页"
+        },
+        localeLinks: {
+          text: "语言"
+        }
+      }
+    }
+  },
   themeConfig: {
+    i18nRouting: true,
     logo: "/favicon.png",
-    nav: [
-      {
-        text: "Language",
-        items: [
-          { text: "English", link: "/" },
-          { text: "简体中文", link: "/zh-CN/" }
-        ]
-      },
-      { text: "Tutorial", link: "/tutorials/quick-start" },
-      { text: "How-to", link: "/how-to/install" },
-      { text: "Reference", link: "/reference/cli" },
-      { text: "Explanation", link: "/explanation/design-boundaries" },
-      { text: "GitHub", link: "https://github.com/PerishCode/envlock" }
-    ],
     sidebar: {
       "/": [
         {
@@ -72,29 +117,21 @@ export default defineConfig({
           items: [
             { text: "首页", link: "/zh-CN/" },
             { text: "安装", link: "/zh-CN/how-to/install" },
-             { text: "常见用法", link: "/zh-CN/how-to/common-recipes" },
-             { text: "CI 集成", link: "/zh-CN/how-to/ci-integration" },
-             { text: "发布验证", link: "/zh-CN/how-to/release-validation" },
-             { text: "发布操作指南", link: "/zh-CN/how-to/release-operator-playbook" },
-             { text: "文档维护", link: "/zh-CN/how-to/docs-maintenance" },
-             { text: "快速参考", link: "/zh-CN/reference/quick-reference" },
-             { text: "CLI 参考", link: "/zh-CN/reference/cli" },
+            { text: "常见用法", link: "/zh-CN/how-to/common-recipes" },
+            { text: "CI 集成", link: "/zh-CN/how-to/ci-integration" },
+            { text: "发布验证", link: "/zh-CN/how-to/release-validation" },
+            { text: "发布操作指南", link: "/zh-CN/how-to/release-operator-playbook" },
+            { text: "文档维护", link: "/zh-CN/how-to/docs-maintenance" },
+            { text: "快速参考", link: "/zh-CN/reference/quick-reference" },
+            { text: "CLI 参考", link: "/zh-CN/reference/cli" },
             { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" },
             { text: "常见问题", link: "/zh-CN/explanation/faq" }
           ]
         }
       ]
     },
-    outline: {
-      level: [2, 3],
-      label: "本页导航"
-    },
     search: {
       provider: "local"
-    },
-    editLink: {
-      pattern: "https://github.com/PerishCode/envlock/edit/main/docs/:path",
-      text: "在 GitHub 上编辑此页"
     },
     socialLinks: [{ icon: "github", link: "https://github.com/PerishCode/envlock" }],
     footer: {
