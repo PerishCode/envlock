@@ -9,6 +9,7 @@
 - CI 集成：[`/zh-CN/how-to/ci-integration`](/zh-CN/how-to/ci-integration)
 - 发布验证：[`/zh-CN/how-to/release-validation`](/zh-CN/how-to/release-validation)
 - 发布操作指南：[`/zh-CN/how-to/release-operator-playbook`](/zh-CN/how-to/release-operator-playbook)
+- 文档维护：[`/zh-CN/how-to/docs-maintenance`](/zh-CN/how-to/docs-maintenance)
 - 快速参考：[`/zh-CN/reference/quick-reference`](/zh-CN/reference/quick-reference)
 - CLI 参考：[`/zh-CN/reference/cli`](/zh-CN/reference/cli)
 - v0.2 迁移：[`/zh-CN/how-to/migrate-to-v0.2`](/zh-CN/how-to/migrate-to-v0.2)
