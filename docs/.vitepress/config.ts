@@ -30,12 +30,13 @@ export default defineConfig({
             { text: "Migrate to v0.2", link: "/how-to/migrate-to-v0.2" },
             { text: "Use Profiles", link: "/how-to/use-profiles" },
             { text: "Run Command Mode", link: "/how-to/command-mode" },
-             { text: "CI Integration", link: "/how-to/ci-integration" },
-             { text: "Release Validation", link: "/how-to/release-validation" },
-             { text: "Release Operator Playbook", link: "/how-to/release-operator-playbook" },
-             { text: "Update and Uninstall", link: "/how-to/update-and-uninstall" }
-           ]
-         },
+            { text: "CI Integration", link: "/how-to/ci-integration" },
+            { text: "Release Validation", link: "/how-to/release-validation" },
+            { text: "Release Operator Playbook", link: "/how-to/release-operator-playbook" },
+            { text: "Update and Uninstall", link: "/how-to/update-and-uninstall" },
+            { text: "Docs Maintenance", link: "/how-to/docs-maintenance" }
+          ]
+        },
         {
           text: "Reference",
           items: [
@@ -68,6 +69,7 @@ export default defineConfig({
              { text: "CI 集成", link: "/zh-CN/how-to/ci-integration" },
              { text: "发布验证", link: "/zh-CN/how-to/release-validation" },
              { text: "发布操作指南", link: "/zh-CN/how-to/release-operator-playbook" },
+             { text: "文档维护", link: "/zh-CN/how-to/docs-maintenance" },
              { text: "快速参考", link: "/zh-CN/reference/quick-reference" },
              { text: "CLI 参考", link: "/zh-CN/reference/cli" },
             { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" },

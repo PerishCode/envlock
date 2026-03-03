@@ -32,6 +32,9 @@ jobs:
       - name: Verify doc alignment
         run: bash scripts/verify-doc-alignment.sh
 
+      - name: Verify doc links
+        run: bash scripts/verify-doc-links.sh
+
       - name: Build docs
         run: pnpm run docs:build
 
