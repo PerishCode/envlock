@@ -109,3 +109,29 @@
     animation: none;
   }
 }
+
+.github-stars-link {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  text-decoration: none;
+  background: var(--vp-c-bg-soft);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.github-stars-link:hover {
+  color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
+}
+
+@media (max-width: 960px) {
+  .github-stars-link {
+    display: none;
+  }
+}

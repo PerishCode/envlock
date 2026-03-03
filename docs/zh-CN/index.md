@@ -2,6 +2,13 @@
 
 `envlock` 用一个 JSON profile 为 shell 或子命令注入可复现的环境变量。
 
+## GitHub 状态
+
+[![CI](https://github.com/PerishCode/envlock/actions/workflows/ci.yml/badge.svg)](https://github.com/PerishCode/envlock/actions/workflows/ci.yml)
+[![Docs](https://github.com/PerishCode/envlock/actions/workflows/docs.yml/badge.svg)](https://github.com/PerishCode/envlock/actions/workflows/docs.yml)
+[![Converge](https://github.com/PerishCode/envlock/actions/workflows/converge.yml/badge.svg)](https://github.com/PerishCode/envlock/actions/workflows/converge.yml)
+[![Latest Release](https://img.shields.io/github/v/release/PerishCode/envlock?sort=semver)](https://github.com/PerishCode/envlock/releases)
+
 ## 快速入口
 
 - 安装：[`/zh-CN/how-to/install`](/zh-CN/how-to/install)

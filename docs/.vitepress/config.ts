@@ -4,12 +4,19 @@ export default defineConfig({
   title: "envlock",
   description: "Deterministic environment sessions from JSON profiles.",
   base: "/envlock/",
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }]],
   cleanUrls: true,
   lastUpdated: true,
   themeConfig: {
+    logo: "/favicon.svg",
     nav: [
-      { text: "EN", link: "/" },
-      { text: "中文", link: "/zh-CN/" },
+      {
+        text: "Language",
+        items: [
+          { text: "English", link: "/" },
+          { text: "简体中文", link: "/zh-CN/" }
+        ]
+      },
       { text: "Tutorial", link: "/tutorials/quick-start" },
       { text: "How-to", link: "/how-to/install" },
       { text: "Reference", link: "/reference/cli" },

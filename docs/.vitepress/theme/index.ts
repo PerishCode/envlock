@@ -1,4 +1,13 @@
 import DefaultTheme from "vitepress/theme";
+import { h } from "vue";
+import GithubStars from "./components/GithubStars.vue";
 import "./style.css";
 
-export default DefaultTheme;
+export default {
+  extends: DefaultTheme,
+  Layout() {
+    return h(DefaultTheme.Layout, null, {
+      "nav-bar-content-after": () => h(GithubStars)
+    });
+  }
+};
