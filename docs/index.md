@@ -35,3 +35,22 @@ This documentation is split into four parts:
 - How-to: task-focused guides for common operations.
 - Reference: authoritative syntax and option tables.
 - Explanation: design intent, boundaries, and tradeoffs.
+
+## Support
+
+- FAQ: [Common Questions](/explanation/faq)
+- Troubleshooting: [Troubleshooting Guide](/explanation/troubleshooting)
+- Issues: [GitHub Issues](https://github.com/PerishCode/envlock/issues)
+
+## Start in 60 seconds
+
+```bash
+mkdir -p "${ENVLOCK_HOME:-$HOME/.envlock}/profiles"
+printf '%s\n' '{"injections":[{"type":"env","vars":{"ENVLOCK_PROFILE":"default"}}]}' > "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json"
+eval "$(envlock)"
+echo "$ENVLOCK_PROFILE"
+```
+
+- Need migration details? See [Migrate to v0.2](/how-to/migrate-to-v0.2).
+- Prefer Chinese docs? Start at [简体中文入口](/zh-CN/).
+- Chinese migration guide: [迁移到 v0.2](/zh-CN/how-to/migrate-to-v0.2).
