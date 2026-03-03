@@ -137,6 +137,9 @@
 }
 
 .github-status-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 0 0 16px;
 }
 
@@ -144,13 +147,13 @@
   display: inline-flex;
   align-items: center;
   line-height: 0;
-  margin: 0 8px 8px 0;
 }
 
 .github-status-badges a img {
   display: inline-block;
   width: auto;
-  max-width: none;
+  max-width: 100%;
+  height: auto;
 }
 
 .github-stars-link:hover {
