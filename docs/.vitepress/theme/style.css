@@ -45,10 +45,25 @@
 }
 
 .VPHero .image .image-src[src*="hero-shell.svg"] {
-  max-height: none;
-  width: min(560px, 44vw);
-  max-width: min(560px, 44vw);
+  max-height: none !important;
+  width: clamp(360px, 44vw, 620px) !important;
+  max-width: 100% !important;
   height: auto;
+}
+
+@media (min-width: 961px) {
+  .VPHero .container > .main {
+    flex: 0 1 52%;
+    max-width: 52%;
+  }
+
+  .VPHero .container > .image {
+    flex: 0 1 48%;
+  }
+
+  .VPHero .image-container {
+    max-width: 100%;
+  }
 }
 
 .VPFeature {
@@ -173,9 +188,18 @@
 }
 
 @media (max-width: 960px) {
+  .VPHero .container > .image {
+    max-width: 100%;
+  }
+
   .VPHero .image .image-src[src*="hero-shell.svg"] {
-    width: min(392px, 86vw);
-    max-width: min(392px, 86vw);
+    width: clamp(260px, 86vw, 420px) !important;
+    max-width: 100% !important;
+  }
+
+  .VPHero .image,
+  .VPHero .image-container {
+    max-width: min(420px, 86vw);
   }
 
   .github-stars-link {
