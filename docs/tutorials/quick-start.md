@@ -84,5 +84,5 @@ envlock --profile ./profiles/dev.json
 ## Next
 
 - Learn default profile resolution in [Use Profiles](/how-to/use-profiles).
-- Review migration notes in [Migrate to v0.2](/how-to/migrate-to-v0.2).
+- Review migration notes in [Migrate to v0.3](/how-to/migrate-to-v0.3).
 - Review all options in [CLI Reference](/reference/cli).

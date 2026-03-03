@@ -79,7 +79,7 @@ export default defineConfig({
           items: [
             { text: "Install", link: "/how-to/install" },
             { text: "Common Recipes", link: "/how-to/common-recipes" },
-            { text: "Migrate to v0.2", link: "/how-to/migrate-to-v0.2" },
+            { text: "Migrate to v0.3", link: "/how-to/migrate-to-v0.3" },
             { text: "Use Profiles", link: "/how-to/use-profiles" },
             { text: "Run Command Mode", link: "/how-to/command-mode" },
             { text: "CI Integration", link: "/how-to/ci-integration" },
@@ -124,7 +124,7 @@ export default defineConfig({
             { text: "文档维护", link: "/zh-CN/how-to/docs-maintenance" },
             { text: "快速参考", link: "/zh-CN/reference/quick-reference" },
             { text: "CLI 参考", link: "/zh-CN/reference/cli" },
-            { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" },
+            { text: "迁移到 v0.3", link: "/zh-CN/how-to/migrate-to-v0.3" },
             { text: "常见问题", link: "/zh-CN/explanation/faq" }
           ]
         }

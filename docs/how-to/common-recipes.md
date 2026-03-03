@@ -1,6 +1,6 @@
 # Common Recipes
 
-Copy-paste snippets for v0.2.1.
+Copy-paste snippets for v0.3.0.
 
 ## 1) Node + npm registry env
 

@@ -20,6 +20,11 @@
 
 ```bash
 # after merging changes and bumping Cargo.toml version
-git tag v0.2.1
-git push origin v0.2.1
+git tag v0.3.0
+git push origin v0.3.0
 ```
+
+## Breaking Change Rule
+
+- Do not keep backward-compat branches inside runtime code to preserve old behavior.
+- If external behavior or API breaks, bump Y version and publish migration docs in EN + zh-CN for the same release.

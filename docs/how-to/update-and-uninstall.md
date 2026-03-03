@@ -23,7 +23,7 @@ envlock self-update --yes
 Pin to specific version:
 
 ```bash
-envlock self-update --version v0.2.1 --yes
+envlock self-update --version v0.3.0 --yes
 ```
 
 ## Uninstall

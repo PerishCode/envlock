@@ -1,6 +1,6 @@
 # Quick Reference
 
-Most-used commands for v0.2+.
+Most-used commands for v0.3.0.
 
 ## Run Flow
 
@@ -39,7 +39,7 @@ echo $?
 envlock self-update --check
 envlock self-update
 envlock self-update --yes
-envlock self-update --version v0.2.1 --yes
+envlock self-update --version v0.3.0 --yes
 ```
 
 ## Install and Uninstall
