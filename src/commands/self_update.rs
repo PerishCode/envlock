@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
-use reqwest::StatusCode;
 use reqwest::blocking::Client;
+use reqwest::{StatusCode, blocking::Response};
 use semver::Version;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -100,16 +100,7 @@ fn http_client() -> Result<Client> {
 }
 
 fn fetch_release(client: &Client, version: Option<&str>) -> Result<Release> {
-    let url = if let Some(version) = version {
-        let tag = if version.starts_with('v') {
-            version.to_string()
-        } else {
-            format!("v{version}")
-        };
-        format!("https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/tags/{tag}")
-    } else {
-        format!("https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest")
-    };
+    let url = release_metadata_url(version);
     let response = client
         .get(url)
         .send()
@@ -127,6 +118,24 @@ fn fetch_release(client: &Client, version: Option<&str>) -> Result<Release> {
         .context("failed to parse release metadata")
 }
 
+fn release_metadata_url(version: Option<&str>) -> String {
+    match version {
+        Some(version) => {
+            let tag = normalize_release_tag(version);
+            format!("https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/tags/{tag}")
+        }
+        None => format!("https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"),
+    }
+}
+
+fn normalize_release_tag(version: &str) -> String {
+    if version.starts_with('v') {
+        version.to_string()
+    } else {
+        format!("v{version}")
+    }
+}
+
 fn current_version() -> Result<Version> {
     Version::parse(env!("CARGO_PKG_VERSION")).context("invalid current version")
 }
@@ -138,7 +147,9 @@ fn parse_semver(tag: &str) -> Result<Version> {
 
 fn prompt_for_confirmation(current: &Version, next_tag: &str) -> Result<()> {
     print!("Upgrade envlock from v{} to {}? [y/N]: ", current, next_tag);
-    io::stdout().flush().ok();
+    io::stdout()
+        .flush()
+        .context("failed to flush confirmation prompt")?;
     let mut answer = String::new();
     io::stdin()
         .read_line(&mut answer)
@@ -155,26 +166,25 @@ fn find_asset<'a>(assets: &'a [ReleaseAsset], name: &str) -> Option<&'a ReleaseA
 }
 
 fn download_text(client: &Client, url: &str) -> Result<String> {
-    client
-        .get(url)
-        .send()
-        .with_context(|| format!("failed to download {url}"))?
-        .error_for_status()
-        .with_context(|| format!("download request failed: {url}"))?
+    fetch_response(client, url)?
         .text()
         .with_context(|| format!("failed to parse text response: {url}"))
 }
 
 fn download_bytes(client: &Client, url: &str) -> Result<Vec<u8>> {
+    fetch_response(client, url)?
+        .bytes()
+        .with_context(|| format!("failed to read bytes response: {url}"))
+        .map(|bytes| bytes.to_vec())
+}
+
+fn fetch_response(client: &Client, url: &str) -> Result<Response> {
     client
         .get(url)
         .send()
         .with_context(|| format!("failed to download {url}"))?
         .error_for_status()
-        .with_context(|| format!("download request failed: {url}"))?
-        .bytes()
-        .with_context(|| format!("failed to read bytes response: {url}"))
-        .map(|bytes| bytes.to_vec())
+        .with_context(|| format!("download request failed: {url}"))
 }
 
 fn parse_checksum(checksums_text: &str, asset_name: &str) -> Option<String> {
@@ -182,7 +192,7 @@ fn parse_checksum(checksums_text: &str, asset_name: &str) -> Option<String> {
         let mut parts = line.split_whitespace();
         let hash = parts.next()?;
         let file = parts.next()?;
-        if file == asset_name || file == format!("*{asset_name}") {
+        if file.trim_start_matches('*') == asset_name {
             return Some(hash.to_string());
         }
         None
@@ -320,6 +330,24 @@ mod tests {
         assert_eq!(
             path,
             PathBuf::from("/tmp/envlock-home/.envlock/bin/envlock")
+        );
+    }
+
+    #[test]
+    fn normalize_release_tag_adds_prefix_once() {
+        assert_eq!(normalize_release_tag("0.2.1"), "v0.2.1");
+        assert_eq!(normalize_release_tag("v0.2.1"), "v0.2.1");
+    }
+
+    #[test]
+    fn release_metadata_url_uses_expected_endpoint() {
+        assert_eq!(
+            release_metadata_url(None),
+            "https://api.github.com/repos/PerishCode/envlock/releases/latest"
+        );
+        assert_eq!(
+            release_metadata_url(Some("0.2.1")),
+            "https://api.github.com/repos/PerishCode/envlock/releases/tags/v0.2.1"
         );
     }
 }

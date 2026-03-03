@@ -6,16 +6,14 @@ use crate::core::profile::{SymlinkOnExist, SymlinkProfile};
 
 pub(crate) struct SymlinkInjection {
     cfg: SymlinkProfile,
-    registered: bool,
-    created_link: bool,
+    cleanup_target: bool,
 }
 
 impl SymlinkInjection {
     pub(crate) fn new(cfg: SymlinkProfile) -> Self {
         Self {
             cfg,
-            registered: false,
-            created_link: false,
+            cleanup_target: false,
         }
     }
 
@@ -38,8 +36,7 @@ impl SymlinkInjection {
 
     pub(crate) fn register(&mut self) -> Result<()> {
         self.register_at(&self.cfg.source, &self.cfg.target, self.cfg.on_exist)?;
-        self.registered = true;
-        self.created_link = true;
+        self.cleanup_target = true;
         Ok(())
     }
 
@@ -48,11 +45,10 @@ impl SymlinkInjection {
     }
 
     pub(crate) fn shutdown(&mut self) -> Result<()> {
-        if self.registered && self.cfg.cleanup && self.created_link {
+        if self.cleanup_target && self.cfg.cleanup {
             self.shutdown_at(&self.cfg.target, &self.cfg.source)?;
-            self.created_link = false;
         }
-        self.registered = false;
+        self.cleanup_target = false;
         Ok(())
     }
 

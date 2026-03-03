@@ -44,40 +44,59 @@ where
             .with_context(|| format!("{} validation failed", injection.name()))?;
     }
 
+    let (registered, register_result) = register_injections(&mut injections);
+    if let Err(register_err) = register_result {
+        let shutdown_result = shutdown_registered(&mut injections, registered);
+        return match shutdown_result {
+            Ok(()) => Err(register_err),
+            Err(shutdown_err) => Err(anyhow!(
+                "{register_err}; also failed shutdown: {shutdown_err}"
+            )),
+        };
+    }
+
+    let work_result = run_export_and_work(app, &injections, work);
+    let shutdown_result = shutdown_registered(&mut injections, registered);
+
+    match (work_result, shutdown_result) {
+        (Ok(result), Ok(())) => Ok(result),
+        (Err(primary), Ok(())) => Err(primary),
+        (Ok(_), Err(shutdown_err)) => Err(shutdown_err),
+        (Err(primary), Err(shutdown_err)) => {
+            Err(anyhow!("{primary}; also failed shutdown: {shutdown_err}"))
+        }
+    }
+}
+
+fn register_injections(injections: &mut [RuntimeInjection]) -> (usize, Result<()>) {
     let mut registered = 0usize;
-    for injection in &mut injections {
+    for injection in injections {
         debug!(
             injection = injection.name(),
             stage = "register",
             "running stage"
         );
-        injection
-            .register()
-            .with_context(|| format!("{} registration failed", injection.name()))?;
+        if let Err(err) = injection.register() {
+            return (
+                registered,
+                Err(err).with_context(|| format!("{} registration failed", injection.name())),
+            );
+        }
         registered += 1;
     }
+    (registered, Ok(()))
+}
 
-    let export_result = collect_exports(app, &injections);
-    let work_result = match &export_result {
-        Ok(exports) => Some(work(exports)),
-        Err(_) => None,
-    };
-    let shutdown_result = shutdown_registered(&mut injections, registered);
-
-    match (export_result, work_result, shutdown_result) {
-        (Ok(_), Some(Ok(result)), Ok(())) => Ok(result),
-        (Ok(_), Some(Err(work_err)), Ok(())) => Err(work_err),
-        (Err(err), _, Ok(())) => Err(err),
-        (Ok(_), Some(Ok(_)), Err(shutdown_err)) => Err(shutdown_err),
-        (Ok(_), Some(Err(work_err)), Err(shutdown_err)) => {
-            Err(anyhow!("{work_err}; also failed shutdown: {shutdown_err}"))
-        }
-        (Err(export_err), _, Err(shutdown_err)) => Err(anyhow!(
-            "{export_err}; also failed shutdown: {shutdown_err}"
-        )),
-        (Ok(_), None, Ok(())) => Err(anyhow!("internal lifecycle error: missing work result")),
-        (Ok(_), None, Err(shutdown_err)) => Err(shutdown_err),
-    }
+fn run_export_and_work<T, F>(
+    app: &dyn AppContext,
+    injections: &[RuntimeInjection],
+    work: F,
+) -> Result<T>
+where
+    F: FnOnce(&[(String, String)]) -> Result<T>,
+{
+    let exports = collect_exports(app, injections)?;
+    work(&exports)
 }
 
 fn collect_exports(
@@ -206,6 +225,7 @@ mod tests {
     use crate::core::config::{LogFormat, OutputMode, RuntimeConfig};
     use std::collections::BTreeMap;
     use std::path::PathBuf;
+    use tempfile::TempDir;
     use tracing_subscriber::filter::LevelFilter;
 
     struct TestEnv;
@@ -341,5 +361,43 @@ mod tests {
         let exports = execute_lifecycle(&app, specs).expect("command should see prior exports");
         assert!(exports.contains(&("BASE".to_string(), "seed".to_string())));
         assert!(exports.contains(&("DERIVED".to_string(), "seed-ok".to_string())));
+    }
+
+    #[test]
+    fn register_failure_rolls_back_prior_registered_injections() {
+        let temp = TempDir::new().expect("temp dir should be created");
+        let source_a = temp.path().join("source-a");
+        let source_b = temp.path().join("source-b");
+        let target_a = temp.path().join("target-a");
+        let target_b = temp.path().join("target-b");
+
+        std::fs::write(&source_a, "a").expect("source-a should exist");
+        std::fs::write(&source_b, "b").expect("source-b should exist");
+        std::fs::write(&target_b, "occupied").expect("target-b should exist");
+
+        let specs = vec![
+            InjectionProfile::Symlink(crate::core::profile::SymlinkProfile {
+                enabled: true,
+                source: source_a.clone(),
+                target: target_a.clone(),
+                on_exist: crate::core::profile::SymlinkOnExist::Error,
+                cleanup: true,
+            }),
+            InjectionProfile::Symlink(crate::core::profile::SymlinkProfile {
+                enabled: true,
+                source: source_b,
+                target: target_b,
+                on_exist: crate::core::profile::SymlinkOnExist::Error,
+                cleanup: true,
+            }),
+        ];
+
+        let app = TestApp::new();
+        let err = execute_lifecycle(&app, specs).expect_err("second register should fail");
+        assert!(err.to_string().contains("registration failed"));
+        assert!(
+            std::fs::symlink_metadata(&target_a).is_err(),
+            "first symlink should be rolled back on later register failure"
+        );
     }
 }
