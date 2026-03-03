@@ -80,6 +80,18 @@ pub enum EnvOpProfile {
     },
 }
 
+impl EnvOpProfile {
+    pub fn key(&self) -> &str {
+        match self {
+            Self::Set { key, .. }
+            | Self::SetIfAbsent { key, .. }
+            | Self::Prepend { key, .. }
+            | Self::Append { key, .. }
+            | Self::Unset { key } => key,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct SymlinkProfile {
     #[serde(default = "default_enabled")]

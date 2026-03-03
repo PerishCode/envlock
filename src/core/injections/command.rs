@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
 
 use crate::core::app::{AppContext, EnvReader};
+use crate::core::env_key::is_valid_env_key;
 use crate::core::profile::CommandProfile;
 
 pub(crate) struct CommandInjection {
@@ -107,17 +108,6 @@ fn strip_quote_delimiters(raw: &str) -> String {
         out.push(ch);
     }
     out
-}
-
-fn is_valid_env_key(key: &str) -> bool {
-    let mut chars = key.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !(first == '_' || first.is_ascii_alphabetic()) {
-        return false;
-    }
-    chars.all(|c| c == '_' || c.is_ascii_alphanumeric())
 }
 
 struct OverlayEnv<'a> {

@@ -112,14 +112,9 @@ fn apply_ops(
                 separator,
                 dedup,
             } => {
-                let sep = separator_value(separator);
-                let base = env
-                    .get(key)
-                    .cloned()
-                    .or_else(|| app.env().var(key))
-                    .unwrap_or_default();
-                let resolved = resolve_resource_refs(value, resource_home)?;
-                env.insert(key.clone(), merge_values(&resolved, &base, sep, *dedup));
+                let merged =
+                    merge_env_op(app, env, key, value, separator, *dedup, true, resource_home)?;
+                env.insert(key.clone(), merged);
             }
             EnvOpProfile::Append {
                 key,
@@ -127,14 +122,17 @@ fn apply_ops(
                 separator,
                 dedup,
             } => {
-                let sep = separator_value(separator);
-                let base = env
-                    .get(key)
-                    .cloned()
-                    .or_else(|| app.env().var(key))
-                    .unwrap_or_default();
-                let resolved = resolve_resource_refs(value, resource_home)?;
-                env.insert(key.clone(), merge_values(&base, &resolved, sep, *dedup));
+                let merged = merge_env_op(
+                    app,
+                    env,
+                    key,
+                    value,
+                    separator,
+                    *dedup,
+                    false,
+                    resource_home,
+                )?;
+                env.insert(key.clone(), merged);
             }
             EnvOpProfile::Unset { key } => {
                 env.remove(key);
@@ -142,6 +140,31 @@ fn apply_ops(
         }
     }
     Ok(())
+}
+
+fn merge_env_op(
+    app: &dyn AppContext,
+    env: &BTreeMap<String, String>,
+    key: &str,
+    value: &str,
+    separator: &Option<String>,
+    dedup: bool,
+    prepend: bool,
+    resource_home: &Path,
+) -> Result<String> {
+    let sep = separator_value(separator);
+    let base = env
+        .get(key)
+        .cloned()
+        .or_else(|| app.env().var(key))
+        .unwrap_or_default();
+    let resolved = resolve_resource_refs(value, resource_home)?;
+    let merged = if prepend {
+        merge_values(&resolved, &base, sep, dedup)
+    } else {
+        merge_values(&base, &resolved, sep, dedup)
+    };
+    Ok(merged)
 }
 
 fn separator_value(separator: &Option<String>) -> &str {

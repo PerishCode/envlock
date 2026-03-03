@@ -119,3 +119,55 @@ fn command_mode_resolves_resource_content_uri() {
     let stdout = String::from_utf8(output.stdout).expect("stdout should be UTF-8");
     assert_eq!(stdout, "{\"default_agent\":\"alpha\"}");
 }
+
+#[test]
+fn command_mode_honors_strict_duplicate_key_checks() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let profile = temp.path().join("strict-profile.json");
+    std::fs::write(
+        &profile,
+        r#"{
+  "injections": [
+    {
+      "type": "env",
+      "vars": {
+        "DUP": "from-env"
+      }
+    },
+    {
+      "type": "command",
+      "program": "bash",
+      "args": [
+        "-lc",
+        "printf 'export DUP=from-command\\n'"
+      ]
+    }
+  ]
+}"#,
+    )
+    .expect("profile should be written");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "-p",
+            profile
+                .to_str()
+                .expect("profile path should be valid UTF-8"),
+            "--strict",
+            "--log-level",
+            "error",
+            "--",
+            "bash",
+            "-lc",
+            "printf '%s' should-not-run",
+        ])
+        .output()
+        .expect("envlock command should run");
+
+    assert!(
+        !output.status.success(),
+        "strict mode should reject duplicate key"
+    );
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be UTF-8");
+    assert!(stderr.contains("duplicate exported key"));
+}

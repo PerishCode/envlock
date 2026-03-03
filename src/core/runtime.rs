@@ -5,6 +5,7 @@ use tracing::{debug, info};
 
 use super::app::AppContext;
 use super::config::OutputMode;
+use super::env_key::is_valid_env_key;
 use super::{injections, profile};
 
 pub struct RunResult {
@@ -29,34 +30,35 @@ pub fn run(app: &dyn AppContext) -> Result<RunResult> {
             export_count = exports.len(),
             "injections lifecycle completed"
         );
+        let env = to_env_map(exports.to_vec(), config.strict)?;
         if let Some(command) = &config.command {
-            let code = run_command(command, exports)?;
+            let run_exports: Vec<(String, String)> = env.into_iter().collect();
+            let code = run_command(command, &run_exports)?;
             return Ok(RunResult {
                 exit_code: Some(code),
             });
         }
-        print_outputs(
-            exports.to_vec(),
-            matches!(config.output_mode, OutputMode::Json),
-            config.strict,
-        )?;
+        print_outputs(env, config.output_mode)?;
         Ok(RunResult { exit_code: None })
     })?;
     info!("envlock run completed");
     Ok(run_result)
 }
 
-fn print_outputs(exports: Vec<(String, String)>, as_json: bool, strict: bool) -> Result<()> {
-    let env = to_env_map(exports, strict)?;
+fn print_outputs(env: BTreeMap<String, String>, mode: OutputMode) -> Result<()> {
     debug!(
-        output_mode = if as_json { "json" } else { "shell" },
+        output_mode = match mode {
+            OutputMode::Json => "json",
+            OutputMode::Shell => "shell",
+        },
         "rendering output"
     );
-    if as_json {
-        println!("{}", serde_json::to_string_pretty(&env)?);
-    } else {
-        for (key, value) in env {
-            println!("export {}='{}'", key, shell_single_quote_escape(&value));
+    match mode {
+        OutputMode::Json => println!("{}", serde_json::to_string_pretty(&env)?),
+        OutputMode::Shell => {
+            for (key, value) in env {
+                println!("export {}='{}'", key, shell_single_quote_escape(&value));
+            }
         }
     }
     Ok(())
@@ -74,17 +76,6 @@ fn to_env_map(exports: Vec<(String, String)>, strict: bool) -> Result<BTreeMap<S
         env.insert(key, value);
     }
     Ok(env)
-}
-
-fn is_valid_env_key(key: &str) -> bool {
-    let mut chars = key.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    if !(first == '_' || first.is_ascii_alphabetic()) {
-        return false;
-    }
-    chars.all(|c| c == '_' || c.is_ascii_alphanumeric())
 }
 
 fn shell_single_quote_escape(input: &str) -> String {
