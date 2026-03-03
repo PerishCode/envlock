@@ -8,6 +8,12 @@
 - CLI 参考：[`/zh-CN/reference/cli`](/zh-CN/reference/cli)
 - v0.2 迁移：[`/zh-CN/how-to/migrate-to-v0.2`](/zh-CN/how-to/migrate-to-v0.2)
 
+## 支持
+
+- FAQ（英文）：[`/explanation/faq`](/explanation/faq)
+- 故障排查（英文）：[`/explanation/troubleshooting`](/explanation/troubleshooting)
+- GitHub Issues：[`PerishCode/envlock/issues`](https://github.com/PerishCode/envlock/issues)
+
 ## 语言说明
 
 - 英文文档是规范入口：[`/`](/)

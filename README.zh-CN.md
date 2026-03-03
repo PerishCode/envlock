@@ -51,11 +51,25 @@ envlock self-update
 ## 文档
 
 - 文档站点：https://perishcode.github.io/envlock/
+- 英文 README：[README.md](README.md)
 - 快速开始：[docs/tutorials/quick-start.md](docs/tutorials/quick-start.md)
 - 安装指南：[docs/how-to/install.md](docs/how-to/install.md)
 - CLI 参考：[docs/reference/cli.md](docs/reference/cli.md)
+- FAQ：[docs/explanation/faq.md](docs/explanation/faq.md)
 - 设计说明：[docs/explanation/design-boundaries.md](docs/explanation/design-boundaries.md)
 - 语言维护策略：[docs/explanation/language-maintenance.md](docs/explanation/language-maintenance.md)
+
+## 故障排查快路径
+
+提交 issue 前，先执行这 3 条命令：
+
+```bash
+envlock --version
+envlock preview --profile "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json"
+envlock --profile "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json" --output json
+```
+
+如果命令失败，请把命令和完整输出一起贴到 issue。
 
 ## 项目信号
 

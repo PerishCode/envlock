@@ -36,6 +36,12 @@ This documentation is split into four parts:
 - Reference: authoritative syntax and option tables.
 - Explanation: design intent, boundaries, and tradeoffs.
 
+## Support
+
+- FAQ: [Common Questions](/explanation/faq)
+- Troubleshooting: [Troubleshooting Guide](/explanation/troubleshooting)
+- Issues: [GitHub Issues](https://github.com/PerishCode/envlock/issues)
+
 ## Start in 60 seconds
 
 ```bash

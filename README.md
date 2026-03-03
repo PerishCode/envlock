@@ -51,11 +51,25 @@ envlock self-update
 ## Docs
 
 - Site: https://perishcode.github.io/envlock/
+- Chinese README: [README.zh-CN.md](README.zh-CN.md)
 - Tutorial: [docs/tutorials/quick-start.md](docs/tutorials/quick-start.md)
 - How-to: [docs/how-to/install.md](docs/how-to/install.md)
 - CLI reference: [docs/reference/cli.md](docs/reference/cli.md)
+- FAQ: [docs/explanation/faq.md](docs/explanation/faq.md)
 - Explanation: [docs/explanation/design-boundaries.md](docs/explanation/design-boundaries.md)
 - Language policy: [docs/explanation/language-maintenance.md](docs/explanation/language-maintenance.md)
+
+## Troubleshooting Fast Path
+
+Run these before filing an issue:
+
+```bash
+envlock --version
+envlock preview --profile "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json"
+envlock --profile "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json" --output json
+```
+
+If one command fails, include the exact command and output in your issue.
 
 ## Project Signals
 

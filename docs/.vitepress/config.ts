@@ -45,6 +45,7 @@ export default defineConfig({
           text: "Explanation",
           items: [
             { text: "Why envlock", link: "/explanation/why-envlock" },
+            { text: "FAQ", link: "/explanation/faq" },
             { text: "Design Boundaries", link: "/explanation/design-boundaries" },
             { text: "Troubleshooting", link: "/explanation/troubleshooting" },
             { text: "Support Policy", link: "/explanation/support-policy" },
