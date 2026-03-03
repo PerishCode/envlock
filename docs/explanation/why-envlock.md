@@ -20,4 +20,4 @@
 - You want one profile artifact that is easy to review and version.
 - You want read-only preview before changing session state.
 
-See also: [Quick Start](/tutorials/quick-start), [Use Profiles](/how-to/use-profiles), and [Migrate to v0.2](/how-to/migrate-to-v0.2).
+See also: [Quick Start](/tutorials/quick-start), [Use Profiles](/how-to/use-profiles), and [Migrate to v0.3](/how-to/migrate-to-v0.3).

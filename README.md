@@ -15,7 +15,7 @@ Installed paths:
 - Binary: `~/.envlock/bin/envlock`
 - Symlink: `~/.local/bin/envlock`
 
-## 60-second quick start (v0.2.1)
+## 60-second quick start (v0.3.0)
 
 Create the default profile, run `envlock` with no flags, then verify:
 
@@ -68,7 +68,7 @@ envlock self-update
 bash scripts/version-sync-check.sh
 bash scripts/release-ready.sh
 bash scripts/converge-check.sh
-bash scripts/release-smoke.sh --version v0.2.1
+bash scripts/release-smoke.sh --version v0.3.0
 ```
 
 `scripts/converge-check.sh` runs doc alignment, doc link integrity, docs build, tests, and public surface checks.
@@ -90,4 +90,4 @@ If one command fails, include the exact command and output in your issue.
 - Releases: https://github.com/PerishCode/envlock/releases
 - Changelog: https://github.com/PerishCode/envlock/releases
 - Docs site: https://perishcode.github.io/envlock/
-- Migration guide (v0.2): https://perishcode.github.io/envlock/how-to/migrate-to-v0.2
+- Migration guide (v0.3): https://perishcode.github.io/envlock/how-to/migrate-to-v0.3

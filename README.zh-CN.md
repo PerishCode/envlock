@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/ins
 - 二进制：`~/.envlock/bin/envlock`
 - 软链接：`~/.local/bin/envlock`
 
-## 60 秒快速开始（v0.2.1）
+## 60 秒快速开始（v0.3.0）
 
 先创建默认 profile，再直接运行 `envlock`：
 
@@ -69,7 +69,7 @@ envlock self-update
 bash scripts/version-sync-check.sh
 bash scripts/release-ready.sh
 bash scripts/converge-check.sh
-bash scripts/release-smoke.sh --version v0.2.1
+bash scripts/release-smoke.sh --version v0.3.0
 ```
 
 ## 故障排查（快速定位）
@@ -89,4 +89,4 @@ envlock --profile "${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json" --outp
 - Releases：https://github.com/PerishCode/envlock/releases
 - 变更记录：https://github.com/PerishCode/envlock/releases
 - 文档站点：https://perishcode.github.io/envlock/
-- 迁移指南（v0.2）：https://perishcode.github.io/envlock/how-to/migrate-to-v0.2
+- 迁移指南（v0.3）：https://perishcode.github.io/envlock/how-to/migrate-to-v0.3

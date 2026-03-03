@@ -48,7 +48,7 @@ features:
 - 文档维护：[`/zh-CN/how-to/docs-maintenance`](/zh-CN/how-to/docs-maintenance)
 - 快速参考：[`/zh-CN/reference/quick-reference`](/zh-CN/reference/quick-reference)
 - CLI 参考：[`/zh-CN/reference/cli`](/zh-CN/reference/cli)
-- v0.2 迁移：[`/zh-CN/how-to/migrate-to-v0.2`](/zh-CN/how-to/migrate-to-v0.2)
+- v0.3 迁移：[`/zh-CN/how-to/migrate-to-v0.3`](/zh-CN/how-to/migrate-to-v0.3)
 
 ## 支持
 

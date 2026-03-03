@@ -62,7 +62,7 @@ eval "$(envlock)"
 echo "$ENVLOCK_PROFILE"
 ```
 
-- Need migration details? See [Migrate to v0.2](/how-to/migrate-to-v0.2).
+- Need migration details? See [Migrate to v0.3](/how-to/migrate-to-v0.3).
 - Need copy-paste tasks? See [Common Recipes](/how-to/common-recipes).
 - Need fast command lookup? See [Quick Reference](/reference/quick-reference).
 - Need CI setup? See [CI Integration](/how-to/ci-integration).
@@ -70,4 +70,4 @@ echo "$ENVLOCK_PROFILE"
 - Need operator release steps? See [Release Operator Playbook](/how-to/release-operator-playbook).
 - Need docs checks? See [Docs Maintenance](/how-to/docs-maintenance).
 - Prefer Chinese docs? Start at [简体中文入口](/zh-CN/).
-- Chinese migration guide: [迁移到 v0.2](/zh-CN/how-to/migrate-to-v0.2).
+- Chinese migration guide: [迁移到 v0.3](/zh-CN/how-to/migrate-to-v0.3).

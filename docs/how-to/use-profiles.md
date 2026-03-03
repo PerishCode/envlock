@@ -2,7 +2,7 @@
 
 `envlock` supports convention-first resolution with explicit override.
 
-If you are upgrading from older invocation patterns, check [Migrate to v0.2](/how-to/migrate-to-v0.2).
+If you are upgrading from older invocation patterns, check [Migrate to v0.3](/how-to/migrate-to-v0.3).
 
 ## Mode A: Explicit Path
 
