@@ -3,11 +3,13 @@ use std::process;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use envlock::app::{App, AppContext};
-use envlock::config::{CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig};
-use envlock::preview::{PreviewOutputMode, run as run_preview};
+use envlock::commands::preview::{PreviewOutputMode, run as run_preview};
+use envlock::commands::self_update::{SelfUpdateOptions, run as run_self_update};
+use envlock::core::app::{App, AppContext};
+use envlock::core::config::{
+    CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig,
+};
 use envlock::run;
-use envlock::self_update::{SelfUpdateOptions, run as run_self_update};
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Debug, Parser)]

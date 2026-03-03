@@ -6,8 +6,8 @@ use anyhow::{Context, Result, anyhow};
 use std::collections::BTreeMap;
 use tracing::{debug, info};
 
-use crate::app::AppContext;
-use crate::profile::InjectionProfile;
+use crate::core::app::AppContext;
+use crate::core::profile::InjectionProfile;
 use command::CommandInjection;
 use env::EnvInjection;
 use symlink::SymlinkInjection;
@@ -202,8 +202,8 @@ impl RuntimeInjection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::{AppContext, CommandRunner, EnvReader};
-    use crate::config::{LogFormat, OutputMode, RuntimeConfig};
+    use crate::core::app::{AppContext, CommandRunner, EnvReader};
+    use crate::core::config::{LogFormat, OutputMode, RuntimeConfig};
     use std::collections::BTreeMap;
     use std::path::PathBuf;
     use tracing_subscriber::filter::LevelFilter;
@@ -269,12 +269,12 @@ mod tests {
     #[test]
     fn skip_disabled_env_injection() {
         let specs = vec![
-            InjectionProfile::Env(crate::profile::EnvProfile {
+            InjectionProfile::Env(crate::core::profile::EnvProfile {
                 enabled: false,
                 vars: BTreeMap::from([("A".to_string(), "1".to_string())]),
                 ops: Vec::new(),
             }),
-            InjectionProfile::Env(crate::profile::EnvProfile {
+            InjectionProfile::Env(crate::core::profile::EnvProfile {
                 enabled: true,
                 vars: BTreeMap::from([("B".to_string(), "2".to_string())]),
                 ops: Vec::new(),
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn fail_validation_when_env_key_is_empty() {
-        let specs = vec![InjectionProfile::Env(crate::profile::EnvProfile {
+        let specs = vec![InjectionProfile::Env(crate::core::profile::EnvProfile {
             enabled: true,
             vars: BTreeMap::from([("   ".to_string(), "1".to_string())]),
             ops: Vec::new(),
@@ -302,14 +302,16 @@ mod tests {
 
     #[test]
     fn command_injection_exports_values() {
-        let specs = vec![InjectionProfile::Command(crate::profile::CommandProfile {
-            enabled: true,
-            program: "bash".to_string(),
-            args: vec![
-                "-lc".to_string(),
-                "printf \"export CMD_A='1'\\nCMD_B=2\\n\"".to_string(),
-            ],
-        })];
+        let specs = vec![InjectionProfile::Command(
+            crate::core::profile::CommandProfile {
+                enabled: true,
+                program: "bash".to_string(),
+                args: vec![
+                    "-lc".to_string(),
+                    "printf \"export CMD_A='1'\\nCMD_B=2\\n\"".to_string(),
+                ],
+            },
+        )];
 
         let app = TestApp::new();
         let exports = execute_lifecycle(&app, specs).expect("command lifecycle should pass");
@@ -320,12 +322,12 @@ mod tests {
     #[test]
     fn command_injection_observes_prior_exports() {
         let specs = vec![
-            InjectionProfile::Env(crate::profile::EnvProfile {
+            InjectionProfile::Env(crate::core::profile::EnvProfile {
                 enabled: true,
                 vars: BTreeMap::from([("BASE".to_string(), "seed".to_string())]),
                 ops: Vec::new(),
             }),
-            InjectionProfile::Command(crate::profile::CommandProfile {
+            InjectionProfile::Command(crate::core::profile::CommandProfile {
                 enabled: true,
                 program: "bash".to_string(),
                 args: vec![

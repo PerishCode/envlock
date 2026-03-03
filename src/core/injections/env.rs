@@ -3,8 +3,8 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
-use crate::app::AppContext;
-use crate::profile::{EnvOpProfile, EnvProfile};
+use crate::core::app::AppContext;
+use crate::core::profile::{EnvOpProfile, EnvProfile};
 
 pub(crate) struct EnvInjection {
     cfg: EnvProfile,
@@ -252,8 +252,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::app::{AppContext, CommandRunner, EnvReader};
-    use crate::config::{LogFormat, OutputMode, RuntimeConfig};
+    use crate::core::app::{AppContext, CommandRunner, EnvReader};
+    use crate::core::config::{LogFormat, OutputMode, RuntimeConfig};
     use tracing_subscriber::filter::LevelFilter;
 
     struct TestEnv {

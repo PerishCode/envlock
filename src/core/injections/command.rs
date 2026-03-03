@@ -1,8 +1,8 @@
 use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
 
-use crate::app::{AppContext, EnvReader};
-use crate::profile::CommandProfile;
+use crate::core::app::{AppContext, EnvReader};
+use crate::core::profile::CommandProfile;
 
 pub(crate) struct CommandInjection {
     cfg: CommandProfile,
