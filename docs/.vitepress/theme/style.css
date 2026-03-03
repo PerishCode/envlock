@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@600;700&display=swap");
 
 :root {
   --vp-font-family-base: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
@@ -27,10 +27,16 @@
 
 .VPHero .container {
   border-radius: 24px;
-  padding-bottom: 28px;
+  padding: 20px clamp(16px, 2.5vw, 28px) 28px;
   background:
     radial-gradient(130% 80% at 0% 0%, rgba(20, 184, 166, 0.16), transparent 60%),
     radial-gradient(120% 90% at 100% 20%, rgba(249, 115, 22, 0.18), transparent 62%);
+}
+
+.VPNavBarTitle .title {
+  font-family: "Sora", "IBM Plex Sans", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .VPHero .text {
@@ -123,6 +129,10 @@
   text-decoration: none;
   background: var(--vp-c-bg-soft);
   transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.VPNavBarExtra .github-stars-link {
+  margin-left: 8px;
 }
 
 .github-stars-link:hover {
