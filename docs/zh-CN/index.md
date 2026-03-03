@@ -10,6 +10,7 @@
 
 ## 支持
 
+- FAQ（中文）：[`/zh-CN/explanation/faq`](/zh-CN/explanation/faq)
 - FAQ（英文）：[`/explanation/faq`](/explanation/faq)
 - 故障排查（英文）：[`/explanation/troubleshooting`](/explanation/troubleshooting)
 - GitHub Issues：[`PerishCode/envlock/issues`](https://github.com/PerishCode/envlock/issues)

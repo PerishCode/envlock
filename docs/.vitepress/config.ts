@@ -60,7 +60,8 @@ export default defineConfig({
             { text: "首页", link: "/zh-CN/" },
             { text: "安装", link: "/zh-CN/how-to/install" },
             { text: "CLI 参考", link: "/zh-CN/reference/cli" },
-            { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" }
+            { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" },
+            { text: "常见问题", link: "/zh-CN/explanation/faq" }
           ]
         }
       ]
