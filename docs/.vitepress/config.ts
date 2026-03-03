@@ -8,44 +8,62 @@ export default defineConfig({
   lastUpdated: true,
   themeConfig: {
     nav: [
+      { text: "EN", link: "/" },
+      { text: "中文", link: "/zh-CN/" },
       { text: "Tutorial", link: "/tutorials/quick-start" },
       { text: "How-to", link: "/how-to/install" },
       { text: "Reference", link: "/reference/cli" },
       { text: "Explanation", link: "/explanation/design-boundaries" },
       { text: "GitHub", link: "https://github.com/PerishCode/envlock" }
     ],
-    sidebar: [
-      {
-        text: "Tutorial",
-        items: [{ text: "Quick Start", link: "/tutorials/quick-start" }]
-      },
-      {
-        text: "How-to",
-        items: [
-          { text: "Install", link: "/how-to/install" },
-          { text: "Use Profiles", link: "/how-to/use-profiles" },
-          { text: "Run Command Mode", link: "/how-to/command-mode" },
-          { text: "Update and Uninstall", link: "/how-to/update-and-uninstall" }
-        ]
-      },
-      {
-        text: "Reference",
-        items: [
-          { text: "CLI", link: "/reference/cli" },
-          { text: "Profile Format", link: "/reference/profile" },
-          { text: "Environment Variables", link: "/reference/environment" },
-          { text: "Release Pipeline", link: "/reference/release" }
-        ]
-      },
-      {
-        text: "Explanation",
-        items: [
-          { text: "Design Boundaries", link: "/explanation/design-boundaries" },
-          { text: "Troubleshooting", link: "/explanation/troubleshooting" },
-          { text: "Support Policy", link: "/explanation/support-policy" }
-        ]
-      }
-    ],
+    sidebar: {
+      "/": [
+        {
+          text: "Tutorial",
+          items: [{ text: "Quick Start", link: "/tutorials/quick-start" }]
+        },
+        {
+          text: "How-to",
+          items: [
+            { text: "Install", link: "/how-to/install" },
+            { text: "Migrate to v0.2", link: "/how-to/migrate-to-v0.2" },
+            { text: "Use Profiles", link: "/how-to/use-profiles" },
+            { text: "Run Command Mode", link: "/how-to/command-mode" },
+            { text: "Update and Uninstall", link: "/how-to/update-and-uninstall" }
+          ]
+        },
+        {
+          text: "Reference",
+          items: [
+            { text: "CLI", link: "/reference/cli" },
+            { text: "Profile Format", link: "/reference/profile" },
+            { text: "Environment Variables", link: "/reference/environment" },
+            { text: "Release Pipeline", link: "/reference/release" }
+          ]
+        },
+        {
+          text: "Explanation",
+          items: [
+            { text: "Why envlock", link: "/explanation/why-envlock" },
+            { text: "Design Boundaries", link: "/explanation/design-boundaries" },
+            { text: "Troubleshooting", link: "/explanation/troubleshooting" },
+            { text: "Support Policy", link: "/explanation/support-policy" },
+            { text: "Language Maintenance", link: "/explanation/language-maintenance" }
+          ]
+        }
+      ],
+      "/zh-CN/": [
+        {
+          text: "中文文档",
+          items: [
+            { text: "首页", link: "/zh-CN/" },
+            { text: "安装", link: "/zh-CN/how-to/install" },
+            { text: "CLI 参考", link: "/zh-CN/reference/cli" },
+            { text: "迁移到 v0.2", link: "/zh-CN/how-to/migrate-to-v0.2" }
+          ]
+        }
+      ]
+    },
     outline: {
       level: [2, 3],
       label: "On this page"

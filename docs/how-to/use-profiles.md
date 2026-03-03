@@ -2,6 +2,8 @@
 
 `envlock` supports convention-first resolution with explicit override.
 
+If you are upgrading from older invocation patterns, check [Migrate to v0.2](/how-to/migrate-to-v0.2).
+
 ## Mode A: Explicit Path
 
 ```bash
@@ -15,6 +17,10 @@ Use this when your profile lives next to a project.
 ```bash
 envlock
 ```
+
+Default profile file:
+
+- `${ENVLOCK_HOME:-$HOME/.envlock}/profiles/default.json`
 
 Lookup behavior:
 
