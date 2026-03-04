@@ -54,6 +54,7 @@
   display: grid;
   grid-template-columns: repeat(24, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: start;
   gap: 14px;
   width: 80vw;
   height: 80vh;
@@ -65,6 +66,7 @@
 
 .landing-card {
   min-width: 0;
+  align-self: start;
   border: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 10%, var(--vp-c-divider));
   border-radius: 16px;
   padding: 14px 16px;
@@ -301,19 +303,9 @@
   box-shadow: 0 8px 24px color-mix(in srgb, var(--vp-c-brand-1) 7%, transparent);
 }
 
-.hero-shell-top {
-  padding: 14px 16px 10px;
-}
-
-.hero-shell-top h2 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  line-height: 1.2;
-  font-family: var(--vp-font-family-mono);
-}
-
 .hero-shell-hint {
   margin: 0;
+  padding: 8px 11px 0;
   color: var(--vp-c-text-2);
   font-size: 12px;
   line-height: 1.45;
@@ -325,7 +317,6 @@
   gap: 6px;
   padding: 7px 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 14%, var(--vp-c-divider));
-  border-top: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 14%, var(--vp-c-divider));
   background: color-mix(in srgb, var(--vp-c-bg-alt) 90%, transparent);
 }
 

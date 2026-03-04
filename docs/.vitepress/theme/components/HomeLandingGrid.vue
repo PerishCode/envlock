@@ -257,7 +257,6 @@ const labels = computed(() =>
         tableTitle: "Title",
         tableTags: "Tags",
         tableAbstract: "Abstract",
-        quickShell: "shell · envlock",
         quickTitle: "快速启动",
         quickHint: "3 行命令，冷启动完成闭环验证",
         docsTitle: "核心文档入口",
@@ -272,7 +271,6 @@ const labels = computed(() =>
         tableTitle: "Title",
         tableTags: "Tags",
         tableAbstract: "Abstract",
-        quickShell: "shell · envlock",
         quickTitle: "Quick Start",
         quickHint: "Three lines to verify cold-start closure",
         docsTitle: "Core Docs",
@@ -343,7 +341,7 @@ const labels = computed(() =>
     </article>
 
     <div class="landing-quickstart">
-      <HomeHeroShell :heading="labels.quickTitle" :hint="labels.quickHint" :title="labels.quickShell" :code="quickStart" />
+      <HomeHeroShell :heading="labels.quickTitle" :hint="labels.quickHint" :code="quickStart" />
     </div>
 
     <article class="landing-card landing-docs">
