@@ -15,21 +15,6 @@ const scoreRows = computed(() => {
   if (isZh.value) {
     return [
       {
-        level: "L1 other",
-        rule: "无可靠闭环路径；在 Agent-Native 下是 non-sense。",
-        tools: [] as Array<{ name: string; url: string }>
-      },
-      {
-        level: "L2 normal",
-        rule: "闭环存在，但通过 envlock 非兼容路径完成。",
-        tools: [{ name: "fnm", url: "https://github.com/Schniz/fnm" }]
-      },
-      {
-        level: "L3 good",
-        rule: "OR：至少一条强闭环路径成熟，但覆盖未达 native。",
-        tools: [{ name: "datadog", url: "https://docs.datadoghq.com/api/latest/" }]
-      },
-      {
         level: "L4 native",
         rule: "AND：最强闭环 + 最小 Agent 成本同时成立。",
         tools: [
@@ -38,26 +23,26 @@ const scoreRows = computed(() => {
           { name: "kubectl", url: "https://kubernetes.io/docs/reference/kubectl/" },
           { name: "tf", url: "https://developer.hashicorp.com/terraform/cli" }
         ]
+      },
+      {
+        level: "L3 good",
+        rule: "OR：至少一条强闭环路径成熟，但覆盖未达 native。",
+        tools: [{ name: "datadog", url: "https://docs.datadoghq.com/api/latest/" }]
+      },
+      {
+        level: "L2 normal",
+        rule: "闭环存在，但通过 envlock 非兼容路径完成。",
+        tools: [{ name: "fnm", url: "https://github.com/Schniz/fnm" }]
+      },
+      {
+        level: "L1 other",
+        rule: "无可靠闭环路径；在 Agent-Native 下是 non-sense。",
+        tools: [] as Array<{ name: string; url: string }>
       }
     ];
   }
 
   return [
-    {
-      level: "L1 other",
-      rule: "No reliable closure path; non-sense for Agent-Native workflows.",
-      tools: [] as Array<{ name: string; url: string }>
-    },
-    {
-      level: "L2 normal",
-      rule: "Closure exists through envlock-non-compatible paths.",
-      tools: [{ name: "fnm", url: "https://github.com/Schniz/fnm" }]
-    },
-    {
-      level: "L3 good",
-      rule: "OR: at least one strong closure path is mature, but coverage is below native.",
-      tools: [{ name: "datadog", url: "https://docs.datadoghq.com/api/latest/" }]
-    },
     {
       level: "L4 native",
       rule: "AND: strongest closure and minimum agent-side cost are both satisfied.",
@@ -67,6 +52,21 @@ const scoreRows = computed(() => {
         { name: "kubectl", url: "https://kubernetes.io/docs/reference/kubectl/" },
         { name: "tf", url: "https://developer.hashicorp.com/terraform/cli" }
       ]
+    },
+    {
+      level: "L3 good",
+      rule: "OR: at least one strong closure path is mature, but coverage is below native.",
+      tools: [{ name: "datadog", url: "https://docs.datadoghq.com/api/latest/" }]
+    },
+    {
+      level: "L2 normal",
+      rule: "Closure exists through envlock-non-compatible paths.",
+      tools: [{ name: "fnm", url: "https://github.com/Schniz/fnm" }]
+    },
+    {
+      level: "L1 other",
+      rule: "No reliable closure path; non-sense for Agent-Native workflows.",
+      tools: [] as Array<{ name: string; url: string }>
     }
   ];
 });
@@ -98,7 +98,6 @@ const docsLinks = computed(() => {
 const labels = computed(() =>
   isZh.value
     ? {
-        boardTitle: "envlock-score 榜单",
         quickTitle: "快速启动",
         docsTitle: "核心文档入口",
         scoreRule: "评分原则",
@@ -106,7 +105,6 @@ const labels = computed(() =>
         none: "无"
       }
     : {
-        boardTitle: "envlock-score board",
         quickTitle: "Quick Start",
         docsTitle: "Core Docs",
         scoreRule: "Rule",
@@ -120,9 +118,9 @@ const labels = computed(() =>
   <section class="home-landing-shell" aria-label="envlock landing shell">
     <section class="home-landing-grid" aria-label="envlock landing grid">
       <article class="landing-card landing-board">
-        <h2>{{ labels.boardTitle }}</h2>
+        <h2 class="landing-score-title">Scoreboard <small>by envlock</small></h2>
         <div class="score-accordion">
-          <details class="score-item" v-for="row in scoreRows" :key="row.level" :open="row.level.startsWith('L1')">
+          <details class="score-item" v-for="row in scoreRows" :key="row.level" :open="row.level.startsWith('L4')">
             <summary class="score-item-head">{{ row.level }}</summary>
             <div class="score-item-body">
               <p><strong>{{ labels.scoreRule }}:</strong> {{ row.rule }}</p>
