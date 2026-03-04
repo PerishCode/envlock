@@ -8,11 +8,11 @@ hero:
   tagline: 用一个 JSON profile 为 shell 或子命令注入可预测、可验证的环境变量。
   actions:
     - theme: brand
-      text: 快速开始（英文）
-      link: /tutorials/quick-start
+      text: 快速开始
+      link: /zh-CN/tutorials/quick-start
     - theme: alt
-      text: Profile 参考（英文）
-      link: /reference/profile
+      text: Profile 参考
+      link: /zh-CN/reference/profile
     - theme: alt
       text: CLI 参考
       link: /zh-CN/reference/cli
@@ -58,7 +58,7 @@ echo "$ENVLOCK_PROFILE"
 ## 支持
 
 - FAQ：[`/zh-CN/explanation/faq`](/zh-CN/explanation/faq)
-- 故障排查（英文）：[`/explanation/troubleshooting`](/explanation/troubleshooting)
+- 故障排查：[`/zh-CN/explanation/troubleshooting`](/zh-CN/explanation/troubleshooting)
 - GitHub Issues：[`PerishCode/envlock/issues`](https://github.com/PerishCode/envlock/issues)
 
 ## 60 秒启动
