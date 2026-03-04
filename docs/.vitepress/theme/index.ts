@@ -10,7 +10,7 @@ export default {
   Layout() {
     return h(DefaultTheme.Layout, null, {
       "nav-bar-content-after": () => h(GithubStars),
-      "home-hero-info-before": () => h(HomeScoreTabs),
+      "home-hero-before": () => h(HomeScoreTabs),
       "home-hero-image": () => h(HomeHeroShell)
     });
   }
