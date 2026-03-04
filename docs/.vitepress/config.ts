@@ -45,7 +45,7 @@ export default defineConfig({
       description: "通过 JSON 配置实现可复现环境会话。",
       themeConfig: {
         nav: [
-          { text: "教程", link: "/tutorials/quick-start" },
+          { text: "教程", link: "/zh-CN/tutorials/quick-start" },
           { text: "操作指南", link: "/zh-CN/how-to/install" },
           { text: "参考", link: "/zh-CN/reference/cli" },
           { text: "说明", link: "/zh-CN/explanation/faq" },
@@ -114,7 +114,7 @@ export default defineConfig({
       "/zh-CN/": [
         {
           text: "教程",
-          items: [{ text: "快速开始（英文）", link: "/tutorials/quick-start" }]
+          items: [{ text: "快速开始", link: "/zh-CN/tutorials/quick-start" }]
         },
         {
           text: "操作指南",
@@ -122,12 +122,12 @@ export default defineConfig({
             { text: "安装", link: "/zh-CN/how-to/install" },
             { text: "常见用法", link: "/zh-CN/how-to/common-recipes" },
             { text: "迁移到 v0.3", link: "/zh-CN/how-to/migrate-to-v0.3" },
-            { text: "使用 Profiles（英文）", link: "/how-to/use-profiles" },
+            { text: "使用 Profiles", link: "/zh-CN/how-to/use-profiles" },
             { text: "子命令模式", link: "/zh-CN/how-to/command-mode" },
             { text: "CI 集成", link: "/zh-CN/how-to/ci-integration" },
             { text: "发布验证", link: "/zh-CN/how-to/release-validation" },
             { text: "发布操作指南", link: "/zh-CN/how-to/release-operator-playbook" },
-            { text: "更新与卸载（英文）", link: "/how-to/update-and-uninstall" },
+            { text: "更新与卸载", link: "/zh-CN/how-to/update-and-uninstall" },
             { text: "文档维护", link: "/zh-CN/how-to/docs-maintenance" },
           ]
         },
@@ -136,20 +136,20 @@ export default defineConfig({
           items: [
             { text: "快速参考", link: "/zh-CN/reference/quick-reference" },
             { text: "CLI 参考", link: "/zh-CN/reference/cli" },
-            { text: "Profile 格式（英文）", link: "/reference/profile" },
-            { text: "环境变量（英文）", link: "/reference/environment" },
-            { text: "发布流水线（英文）", link: "/reference/release" }
+            { text: "Profile 格式", link: "/zh-CN/reference/profile" },
+            { text: "环境变量", link: "/zh-CN/reference/environment" },
+            { text: "发布流水线", link: "/zh-CN/reference/release" }
           ]
         },
         {
           text: "说明",
           items: [
-            { text: "为什么选择 envlock（英文）", link: "/explanation/why-envlock" },
+            { text: "为什么选择 envlock", link: "/zh-CN/explanation/why-envlock" },
             { text: "常见问题", link: "/zh-CN/explanation/faq" },
-            { text: "设计边界（英文）", link: "/explanation/design-boundaries" },
-            { text: "故障排查（英文）", link: "/explanation/troubleshooting" },
-            { text: "支持策略（英文）", link: "/explanation/support-policy" },
-            { text: "语言维护（英文）", link: "/explanation/language-maintenance" }
+            { text: "设计边界", link: "/zh-CN/explanation/design-boundaries" },
+            { text: "故障排查", link: "/zh-CN/explanation/troubleshooting" },
+            { text: "支持策略", link: "/zh-CN/explanation/support-policy" },
+            { text: "语言维护", link: "/zh-CN/explanation/language-maintenance" }
           ]
         }
       ]
