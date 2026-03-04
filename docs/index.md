@@ -6,12 +6,6 @@ hero:
   name: envlock
   text: Deterministic Environment Sessions
   tagline: Build reproducible shell and command environments from one JSON profile.
-  image:
-    src: /hero-shell.svg
-    alt: envlock shell quick verify
-    class: hero-shell-image
-    width: 720
-    height: 480
   actions:
     - theme: brand
       text: Quick Start

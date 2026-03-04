@@ -44,27 +44,92 @@
   letter-spacing: -0.01em;
 }
 
-.VPHero .image .image-src[src*="hero-shell.svg"] {
-  max-height: none !important;
-  width: clamp(360px, 44vw, 620px) !important;
-  max-width: 100% !important;
-  height: auto;
-}
-
 @media (min-width: 961px) {
   .VPHero .container > .main {
-    flex: 0 1 52%;
-    max-width: 52%;
+    flex: 0 1 50%;
+    max-width: 50%;
   }
 
   .VPHero .container > .image {
-    flex: 0 1 48%;
+    flex: 0 1 50%;
   }
 
   .VPHero .image-container {
-    max-width: 100%;
+    width: 100% !important;
+    height: auto !important;
     transform: none !important;
   }
+}
+
+.VPHero .image {
+  margin: 0;
+}
+
+.VPHero .image-bg {
+  display: none;
+}
+
+.hero-shell-panel {
+  width: min(620px, 46vw);
+  max-width: 100%;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #0f172a 0%, #0b1220 100%);
+  color: #e5e7eb;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.26);
+  overflow: hidden;
+}
+
+.hero-shell-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #1f2937;
+  background: #0b1324;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-red { background: #fb7185; }
+.dot-yellow { background: #fbbf24; }
+.dot-green { background: #34d399; }
+
+.hero-shell-title {
+  margin-left: 4px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  color: #93c5fd;
+}
+
+.hero-shell-copy {
+  margin-left: auto;
+  border: 1px solid #374151;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: #111827;
+  cursor: pointer;
+}
+
+.hero-shell-copy:hover {
+  border-color: #14b8a6;
+  color: #f8fafc;
+}
+
+.hero-shell-code {
+  margin: 0;
+  padding: 14px 14px 16px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .VPFeature {
@@ -193,14 +258,14 @@
     max-width: 100%;
   }
 
-  .VPHero .image .image-src[src*="hero-shell.svg"] {
-    width: clamp(260px, 86vw, 420px) !important;
-    max-width: 100% !important;
+  .VPHero .image-container {
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
   }
 
-  .VPHero .image,
-  .VPHero .image-container {
-    max-width: min(420px, 86vw);
+  .hero-shell-panel {
+    width: min(420px, 86vw);
   }
 
   .github-stars-link {
