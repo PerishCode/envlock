@@ -34,3 +34,11 @@
 - 稳定的 EN/zh-CN 目录级 1:1 对齐。
 
 不要为了兼容历史行为而增加运行时复杂度。
+
+## Use-Case 闭环
+
+用例分级文档：
+
+- [envlock-good](/zh-CN/explanation/use-cases/envlock-good)
+- [envlock-normal](/zh-CN/explanation/use-cases/envlock-normal)
+- [envlock-bad](/zh-CN/explanation/use-cases/envlock-bad)

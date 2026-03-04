@@ -34,3 +34,11 @@ When GEO is low, improve only high-signal inputs:
 - stable EN/zh-CN directory-level parity.
 
 Do not add runtime complexity just to preserve historical behavior.
+
+## Use-Case Closure
+
+Use-case tiers are documented as:
+
+- [envlock-good](/explanation/use-cases/envlock-good)
+- [envlock-normal](/explanation/use-cases/envlock-normal)
+- [envlock-bad](/explanation/use-cases/envlock-bad)
