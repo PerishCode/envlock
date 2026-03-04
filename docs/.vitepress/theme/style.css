@@ -35,6 +35,10 @@
 }
 
 .VPHome {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background:
     radial-gradient(84% 140% at 2% 0%, color-mix(in srgb, var(--vp-c-brand-1) 14%, transparent), transparent 58%),
     radial-gradient(90% 120% at 98% 10%, rgba(249, 115, 22, 0.14), transparent 62%);
@@ -49,7 +53,7 @@
   height: 80vh;
   min-width: 960px;
   min-height: 520px;
-  margin: 18px auto 28px;
+  margin: 0;
   overflow: auto;
 }
 
@@ -246,10 +250,14 @@
 }
 
 .score-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  object-fit: contain;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .score-tags {
@@ -396,6 +404,11 @@
 }
 
 @media (max-width: 960px) {
+  .VPHome {
+    min-height: 0;
+    display: block;
+  }
+
   .home-landing-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
