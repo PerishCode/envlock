@@ -6,12 +6,6 @@ hero:
   name: envlock
   text: 可复现的环境会话
   tagline: 用一个 JSON profile 为 shell 或子命令注入可预测、可验证的环境变量。
-  image:
-    src: /hero-shell.svg
-    alt: envlock shell quick verify
-    class: hero-shell-image
-    width: 720
-    height: 480
   actions:
     - theme: brand
       text: 快速开始
