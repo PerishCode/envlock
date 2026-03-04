@@ -292,10 +292,31 @@
 }
 
 .hero-shell-panel {
+  min-width: 0;
+  height: 100%;
   border: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 16%, var(--vp-c-divider));
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--vp-c-bg) 90%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vp-c-bg-alt) 95%, transparent), color-mix(in srgb, var(--vp-c-bg-soft) 85%, transparent));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--vp-c-brand-1) 7%, transparent);
+}
+
+.hero-shell-top {
+  padding: 14px 16px 10px;
+}
+
+.hero-shell-top h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-family: var(--vp-font-family-mono);
+}
+
+.hero-shell-hint {
+  margin: 0;
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .hero-shell-head {
@@ -304,6 +325,7 @@
   gap: 6px;
   padding: 7px 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 14%, var(--vp-c-divider));
+  border-top: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 14%, var(--vp-c-divider));
   background: color-mix(in srgb, var(--vp-c-bg-alt) 90%, transparent);
 }
 

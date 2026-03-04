@@ -342,11 +342,9 @@ const labels = computed(() =>
       </div>
     </article>
 
-    <article class="landing-card landing-quickstart">
-      <h2>{{ labels.quickTitle }}</h2>
-      <p class="landing-hint">{{ labels.quickHint }}</p>
-      <HomeHeroShell :title="labels.quickShell" :code="quickStart" />
-    </article>
+    <div class="landing-quickstart">
+      <HomeHeroShell :heading="labels.quickTitle" :hint="labels.quickHint" :title="labels.quickShell" :code="quickStart" />
+    </div>
 
     <article class="landing-card landing-docs">
       <h2>{{ labels.docsTitle }}</h2>
