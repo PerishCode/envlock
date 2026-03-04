@@ -107,7 +107,8 @@ export default defineConfig({
             { text: "Design Boundaries", link: "/explanation/design-boundaries" },
             { text: "Troubleshooting", link: "/explanation/troubleshooting" },
             { text: "Support Policy", link: "/explanation/support-policy" },
-            { text: "Language Maintenance", link: "/explanation/language-maintenance" }
+            { text: "Language Maintenance", link: "/explanation/language-maintenance" },
+            { text: "GEO Index", link: "/explanation/geo-index" }
           ]
         }
       ],
@@ -149,7 +150,8 @@ export default defineConfig({
             { text: "设计边界", link: "/zh-CN/explanation/design-boundaries" },
             { text: "故障排查", link: "/zh-CN/explanation/troubleshooting" },
             { text: "支持策略", link: "/zh-CN/explanation/support-policy" },
-            { text: "语言维护", link: "/zh-CN/explanation/language-maintenance" }
+            { text: "语言维护", link: "/zh-CN/explanation/language-maintenance" },
+            { text: "GEO 指数", link: "/zh-CN/explanation/geo-index" }
           ]
         }
       ]

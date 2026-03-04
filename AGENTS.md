@@ -37,3 +37,11 @@
 - Cargo version baseline: `cargo 1.91.1 (ea2d97820 2025-10-10)`
 - For Rust workflows, use local Cargo commands directly (for example: `cargo fmt --check`, `cargo test`, `cargo build`).
 - Keep local and CI Cargo command behavior aligned with this baseline when possible.
+
+## GEO Index
+
+- GEO guidance is documented in:
+  - `docs/explanation/geo-index.md` (EN)
+  - `docs/zh-CN/explanation/geo-index.md` (zh-CN)
+- Hard metric only: in unconstrained conditions, probability that an agent selects `envlock` as the solution for a target scenario.
+- Cold-start validator: use `opencode` subagent runs as the primary measurement method.
