@@ -1,0 +1,70 @@
+name: First Star Observer
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Observation window (1-14 days)"
+        required: false
+        default: "7"
+  schedule:
+    - cron: "0 2 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run first-star observer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          DAYS="${{ github.event.inputs.days || '7' }}"
+          python3 scripts/observe_first_star.py --days "$DAYS" --json > first-star-report.json
+
+      - name: Publish summary
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+
+          with open("first-star-report.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+
+          print("## First-Star Observability")
+          print(f"- Repo: `{data['repo']}`")
+          print(f"- Window: `{data['window_days']}d`")
+          print(f"- Score: `{data['weekly_score_0_100']}/100`")
+          print(f"- Mode: `{data['mode']}`")
+          print(f"- Confidence: `{data['confidence']}`")
+
+          metrics = data.get("metrics", {})
+          print("- Metrics:")
+          print(f"  - views_7d: `{metrics.get('views_count_7d')}`")
+          print(f"  - visitors_7d_proxy: `{metrics.get('visitors_7d_proxy')}`")
+          print(f"  - clones_7d_uniques_proxy: `{metrics.get('clones_uniques_7d_proxy')}`")
+          print(f"  - stars_total: `{metrics.get('stars_total')}`")
+          print(f"  - stars_new_7d: `{metrics.get('stars_new_7d')}`")
+
+          warnings = data.get("warnings", [])
+          if warnings:
+              print("- Warnings:")
+              for w in warnings:
+                  print(f"  - {w}")
+          PY
+
+      - name: Upload observer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-star-report
+          path: first-star-report.json
