@@ -99,15 +99,8 @@ jobs:
           LEDGER_TITLE="[CVR Ledger] ${MONTH} envlock conversion log"
           LEDGER_NUMBER="$(gh issue list --repo "$REPO" --state all --search "${LEDGER_TITLE} in:title" --json number --jq '.[0].number')"
           if [ -z "$LEDGER_NUMBER" ]; then
-            CREATED_URL="$(gh issue create --repo "$REPO" --title "$LEDGER_TITLE" --body "$(cat <<EOF
-            ## Purpose
-            Durable monthly conversion ledger for first-star readiness and milestone capture.
-
-            ## Policy
-            - Auto-updated by \\`first-star-observer.yml\\`.
-            - One comment per observer run.
-            EOF
-            )")"
+            LEDGER_BODY=$'## Purpose\nDurable monthly conversion ledger for first-star readiness and milestone capture.\n\n## Policy\n- Auto-updated by `first-star-observer.yml`.\n- One comment per observer run.'
+            CREATED_URL="$(gh issue create --repo "$REPO" --title "$LEDGER_TITLE" --body "$LEDGER_BODY")"
             LEDGER_NUMBER="${CREATED_URL##*/}"
           fi
 
