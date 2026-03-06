@@ -20,8 +20,8 @@
 
 ```bash
 # after merging changes and bumping Cargo.toml version
-git tag v0.4.0
-git push origin v0.4.0
+git tag v0.4.1
+git push origin v0.4.1
 ```
 
 ## Breaking Change Rule

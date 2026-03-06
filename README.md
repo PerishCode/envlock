@@ -98,7 +98,7 @@ envlock self-update
 bash scripts/version-sync-check.sh
 bash scripts/release-ready.sh
 bash scripts/converge-check.sh
-bash scripts/release-smoke.sh --version v0.3.0
+bash scripts/release-smoke.sh --version v0.4.1
 ```
 
 `scripts/converge-check.sh` runs doc alignment, doc link integrity, docs build, tests, and public surface checks.
