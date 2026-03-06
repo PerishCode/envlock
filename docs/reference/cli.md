@@ -6,6 +6,11 @@
 envlock [--profile <path>] [--output <shell|json>] [--strict] [-- <cmd...>]
 envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
+envlock profiles status
+envlock profiles init --type <minimal|sample> [--name <name>] [--force]
+envlock alias list
+envlock alias append <name> --profile <path>
+envlock <alias> [-- <cmd...>]
 ```
 
 ## Run Command Options
@@ -44,6 +49,19 @@ When `--profile` is omitted, envlock resolves:
 - `env`: key names only.
 - `command`: program and argument count only.
 - `symlink`: path metadata only.
+
+## `profiles` Commands
+
+- `profiles status`: show `$ENVLOCK_HOME/profiles` health, default profile presence, and JSON parse status.
+- `profiles init --type <minimal|sample>`: create a starter profile at `$ENVLOCK_HOME/profiles/default.json`.
+- `profiles init --name <name>`: write to `$ENVLOCK_HOME/profiles/<name>.json`.
+- `profiles init --force`: overwrite existing target file.
+
+## `alias` Commands
+
+- `alias list`: show alias to profile mappings from `$ENVLOCK_HOME/aliases.json`.
+- `alias append <name> --profile <path>`: append one alias mapping (fails on duplicate name).
+- `envlock <alias>`: fallback to alias profile when `<alias>` is not a built-in command.
 
 ## Exit Behavior
 

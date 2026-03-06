@@ -6,6 +6,11 @@
 envlock [--profile <path>] [--output <shell|json>] [--strict] [-- <cmd...>]
 envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
+envlock profiles status
+envlock profiles init --type <minimal|sample> [--name <name>] [--force]
+envlock alias list
+envlock alias append <name> --profile <path>
+envlock <alias> [-- <cmd...>]
 ```
 
 ## 主命令选项
@@ -44,6 +49,19 @@ envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
 - `env`：仅包含 key 名
 - `command`：仅包含程序名与参数数量
 - `symlink`：仅包含路径元数据
+
+## `profiles` 命令
+
+- `profiles status`：检查 `$ENVLOCK_HOME/profiles` 状态、默认 profile 是否存在、JSON 是否可解析。
+- `profiles init --type <minimal|sample>`：在 `$ENVLOCK_HOME/profiles/default.json` 初始化模板。
+- `profiles init --name <name>`：写入 `$ENVLOCK_HOME/profiles/<name>.json`。
+- `profiles init --force`：覆盖已有文件。
+
+## `alias` 命令
+
+- `alias list`：列出 `$ENVLOCK_HOME/aliases.json` 中的 alias 映射。
+- `alias append <name> --profile <path>`：追加 alias（同名时失败）。
+- `envlock <alias>`：当 `<alias>` 不是内置命令时，自动回退到 alias profile。
 
 ## 退出行为
 

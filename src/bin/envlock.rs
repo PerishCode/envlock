@@ -3,7 +3,15 @@ use std::process;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use envlock::commands::alias::{
+    AliasAppendOptions, resolve_profile_for_alias, run_append as run_alias_append,
+    run_list as run_alias_list,
+};
 use envlock::commands::preview::{PreviewOutputMode, run as run_preview};
+use envlock::commands::profiles::{
+    InitProfileType, ProfilesInitOptions, run_init as run_profiles_init,
+    run_status as run_profiles_status,
+};
 use envlock::commands::self_update::{SelfUpdateOptions, run as run_self_update};
 use envlock::core::app::{App, AppContext};
 use envlock::core::config::{
@@ -31,6 +39,54 @@ struct Cli {
 enum Commands {
     SelfUpdate(SelfUpdateArgs),
     Preview(PreviewArgs),
+    Profiles(ProfilesArgs),
+    Alias(AliasArgs),
+    #[command(external_subcommand)]
+    External(Vec<String>),
+}
+
+#[derive(Debug, Args)]
+struct ProfilesArgs {
+    #[command(subcommand)]
+    command: ProfilesSubcommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum ProfilesSubcommand {
+    Status,
+    Init(ProfilesInitArgs),
+}
+
+#[derive(Debug, Args)]
+struct ProfilesInitArgs {
+    #[arg(long = "type", value_enum, default_value = "minimal")]
+    profile_type: ProfileTemplateType,
+
+    #[arg(long = "name")]
+    name: Option<String>,
+
+    #[arg(long = "force")]
+    force: bool,
+}
+
+#[derive(Debug, Args)]
+struct AliasArgs {
+    #[command(subcommand)]
+    command: AliasSubcommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum AliasSubcommand {
+    List,
+    Append(AliasAppendArgs),
+}
+
+#[derive(Debug, Args)]
+struct AliasAppendArgs {
+    name: String,
+
+    #[arg(long = "profile")]
+    profile: String,
 }
 
 #[derive(Debug, Args)]
@@ -91,26 +147,36 @@ fn main() -> Result<()> {
                     PreviewOutputFormat::Json => PreviewOutputMode::Json,
                 },
             ),
+            Commands::Profiles(args) => match args.command {
+                ProfilesSubcommand::Status => run_profiles_status(),
+                ProfilesSubcommand::Init(init) => run_profiles_init(ProfilesInitOptions {
+                    profile_type: match init.profile_type {
+                        ProfileTemplateType::Minimal => InitProfileType::Minimal,
+                        ProfileTemplateType::Sample => InitProfileType::Sample,
+                    },
+                    name: init.name,
+                    force: init.force,
+                }),
+            },
+            Commands::Alias(args) => match args.command {
+                AliasSubcommand::List => run_alias_list(),
+                AliasSubcommand::Append(append) => run_alias_append(AliasAppendOptions {
+                    name: append.name,
+                    profile: append.profile,
+                }),
+            },
+            Commands::External(tokens) => run_alias_fallback(&tokens, &cli.run_args),
         };
     }
 
-    let config = RuntimeConfig::from_cli_and_env(
-        CliInput {
-            profile: cli.run_args.profile,
-            output_mode: match cli.run_args.output {
-                OutputFormat::Shell => OutputMode::Shell,
-                OutputFormat::Json => OutputMode::Json,
-            },
-            strict: cli.run_args.strict,
-            log_level: cli.run_args.log_level.into(),
-            log_format: match cli.run_args.log_format {
-                LogFormat::Text => RuntimeLogFormat::Text,
-                LogFormat::Json => RuntimeLogFormat::Json,
-            },
-            command: cli.run_args.command,
-        },
-        RawEnv::from_process(),
-    )?;
+    if cli.run_args.profile.is_none()
+        && !cli.run_args.command.is_empty()
+        && resolve_profile_for_alias(&cli.run_args.command[0])?.is_some()
+    {
+        return run_alias_fallback(&cli.run_args.command, &cli.run_args);
+    }
+
+    let config = build_runtime_config(&cli.run_args, None, None)?;
     let app = App::new(config);
     init_logging(app.config().log_level, app.config().log_format)?;
     let result = run(&app)?;
@@ -118,6 +184,58 @@ fn main() -> Result<()> {
         process::exit(code);
     }
     Ok(())
+}
+
+fn run_alias_fallback(tokens: &[String], run_args: &RunArgs) -> Result<()> {
+    let alias_name = tokens
+        .first()
+        .context("missing alias token from external command")?;
+    let profile = resolve_profile_for_alias(alias_name)?;
+    let Some(profile) = profile else {
+        anyhow::bail!("unknown command or alias: {}", alias_name);
+    };
+
+    let command_override = if tokens.len() > 1 {
+        let mut command = tokens[1..].to_vec();
+        if command.first().map(String::as_str) == Some("--") {
+            command.remove(0);
+        }
+        Some(command)
+    } else {
+        Some(Vec::new())
+    };
+    let config = build_runtime_config(run_args, Some(PathBuf::from(profile)), command_override)?;
+    let app = App::new(config);
+    init_logging(app.config().log_level, app.config().log_format)?;
+    let result = run(&app)?;
+    if let Some(code) = result.exit_code {
+        process::exit(code);
+    }
+    Ok(())
+}
+
+fn build_runtime_config(
+    run_args: &RunArgs,
+    profile_override: Option<PathBuf>,
+    command_override: Option<Vec<String>>,
+) -> Result<RuntimeConfig> {
+    RuntimeConfig::from_cli_and_env(
+        CliInput {
+            profile: profile_override.or_else(|| run_args.profile.clone()),
+            output_mode: match run_args.output {
+                OutputFormat::Shell => OutputMode::Shell,
+                OutputFormat::Json => OutputMode::Json,
+            },
+            strict: run_args.strict,
+            log_level: run_args.log_level.into(),
+            log_format: match run_args.log_format {
+                LogFormat::Text => RuntimeLogFormat::Text,
+                LogFormat::Json => RuntimeLogFormat::Json,
+            },
+            command: command_override.unwrap_or_else(|| run_args.command.clone()),
+        },
+        RawEnv::from_process(),
+    )
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -157,6 +275,12 @@ enum LogFormat {
 enum PreviewOutputFormat {
     Text,
     Json,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum ProfileTemplateType {
+    Minimal,
+    Sample,
 }
 
 fn init_logging(

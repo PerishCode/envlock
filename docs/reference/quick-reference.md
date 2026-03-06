@@ -42,6 +42,23 @@ envlock self-update --yes
 envlock self-update --version v0.3.0 --yes
 ```
 
+## Profiles and Alias
+
+```bash
+# inspect local profile state
+envlock profiles status
+
+# initialize starter profile
+envlock profiles init --type minimal
+
+# register alias for a profile
+envlock alias append work --profile ~/.envlock/profiles/work.json
+envlock alias list
+
+# fallback to alias profile
+envlock work
+```
+
 ## Install and Uninstall
 
 ```bash

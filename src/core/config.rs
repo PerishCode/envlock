@@ -62,17 +62,7 @@ pub struct RuntimeConfig {
 
 impl RuntimeConfig {
     pub fn from_cli_and_env(cli: CliInput, env: RawEnv) -> Result<Self> {
-        let envlock_home = env
-            .envlock_home
-            .filter(non_empty_path)
-            .or_else(|| {
-                env.home
-                    .filter(non_empty_path)
-                    .map(|home| home.join(".envlock"))
-            })
-            .ok_or_else(|| {
-                anyhow::anyhow!("HOME is not set; pass --profile or set ENVLOCK_HOME")
-            })?;
+        let envlock_home = resolve_envlock_home(&env)?;
         let resource_home = env
             .envlock_resource_home
             .filter(non_empty_path)
@@ -107,6 +97,19 @@ impl RuntimeConfig {
             resource_home,
         })
     }
+}
+
+pub fn resolve_envlock_home(env: &RawEnv) -> Result<PathBuf> {
+    env.envlock_home
+        .clone()
+        .filter(non_empty_path)
+        .or_else(|| {
+            env.home
+                .clone()
+                .filter(non_empty_path)
+                .map(|home| home.join(".envlock"))
+        })
+        .ok_or_else(|| anyhow::anyhow!("HOME is not set; pass --profile or set ENVLOCK_HOME"))
 }
 
 fn non_empty_path(path: &PathBuf) -> bool {

@@ -42,6 +42,23 @@ envlock self-update --yes
 envlock self-update --version v0.3.0 --yes
 ```
 
+## Profiles 与 Alias
+
+```bash
+# 查看本地 profile 状态
+envlock profiles status
+
+# 初始化模板 profile
+envlock profiles init --type minimal
+
+# 注册 alias 到 profile
+envlock alias append work --profile ~/.envlock/profiles/work.json
+envlock alias list
+
+# 直接通过 alias 运行
+envlock work
+```
+
 ## 安装与卸载
 
 ```bash
