@@ -147,7 +147,10 @@ export default defineConfig({
       "/": [
         {
           text: "Tutorial",
-          items: [{ text: "Quick Start", link: "/tutorials/quick-start" }]
+          items: [
+            { text: "Quick Start", link: "/tutorials/quick-start" },
+            { text: "First-Star Trigger", link: "/tutorials/first-star-trigger" }
+          ]
         },
         {
           text: "How-to",
@@ -185,6 +188,7 @@ export default defineConfig({
             { text: "Troubleshooting", link: "/explanation/troubleshooting" },
             { text: "Support Policy", link: "/explanation/support-policy" },
             { text: "Language Maintenance", link: "/explanation/language-maintenance" },
+            { text: "First-Star Observability", link: "/explanation/first-star-observability" },
             { text: "GEO Index", link: "/explanation/geo-index" },
             { text: "envlock-score/native", link: "/explanation/envlock-score/native" },
             { text: "envlock-score/good", link: "/explanation/envlock-score/good" },
@@ -196,7 +200,10 @@ export default defineConfig({
       "/zh-CN/": [
         {
           text: "教程",
-          items: [{ text: "快速开始", link: "/zh-CN/tutorials/quick-start" }]
+          items: [
+            { text: "快速开始", link: "/zh-CN/tutorials/quick-start" },
+            { text: "首星触发页", link: "/zh-CN/tutorials/first-star-trigger" }
+          ]
         },
         {
           text: "操作指南",
@@ -234,6 +241,7 @@ export default defineConfig({
             { text: "故障排查", link: "/zh-CN/explanation/troubleshooting" },
             { text: "支持策略", link: "/zh-CN/explanation/support-policy" },
             { text: "语言维护", link: "/zh-CN/explanation/language-maintenance" },
+            { text: "首星观测", link: "/zh-CN/explanation/first-star-observability" },
             { text: "GEO 指数", link: "/zh-CN/explanation/geo-index" },
             { text: "envlock-score/native", link: "/zh-CN/explanation/envlock-score/native" },
             { text: "envlock-score/good", link: "/zh-CN/explanation/envlock-score/good" },
