@@ -25,6 +25,13 @@
 - Open PRs against `main`.
 - Use squash merge to keep `main` history clean.
 
+## Agent Autonomy Policy
+
+- This repository is used for high-autonomy, closed-loop agent experiments.
+- Required guardrails and process permissions are already in place for this purpose.
+- Agents are allowed to create and manage PRs proactively when the task flow requires it.
+- Keep safety constraints active: no destructive git operations on shared history, and preserve reproducible verification steps.
+
 ## Node and pnpm Constraints
 
 - Node.js version constraint: `^24` (local baseline: `v24.12.0`)
