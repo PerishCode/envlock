@@ -1,10 +1,10 @@
 use std::io::{self, Cursor, Write};
 use std::path::PathBuf;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
 use reqwest::blocking::Client;
-use reqwest::{blocking::Response, StatusCode};
+use reqwest::{StatusCode, blocking::Response};
 use semver::Version;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
