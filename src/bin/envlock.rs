@@ -79,6 +79,7 @@ struct AliasArgs {
 enum AliasSubcommand {
     List,
     Append(AliasAppendArgs),
+    Run(AliasRunArgs),
 }
 
 #[derive(Debug, Args)]
@@ -87,6 +88,14 @@ struct AliasAppendArgs {
 
     #[arg(long = "profile")]
     profile: String,
+}
+
+#[derive(Debug, Args)]
+struct AliasRunArgs {
+    name: String,
+
+    #[arg(trailing_var_arg = true)]
+    command: Vec<String>,
 }
 
 #[derive(Debug, Args)]
@@ -164,16 +173,21 @@ fn main() -> Result<()> {
                     name: append.name,
                     profile: append.profile,
                 }),
+                AliasSubcommand::Run(run_args) => {
+                    run_alias_named(&run_args.name, &cli.run_args, Some(run_args.command))
+                }
             },
-            Commands::External(tokens) => run_alias_fallback(&tokens, &cli.run_args),
+            Commands::External(tokens) => run_external_command(&tokens, &cli.run_args),
         };
     }
 
-    if cli.run_args.profile.is_none()
-        && !cli.run_args.command.is_empty()
-        && resolve_profile_for_alias(&cli.run_args.command[0])?.is_some()
-    {
-        return run_alias_fallback(&cli.run_args.command, &cli.run_args);
+    if let Some(alias_name) = parse_shortcut_alias_name(&cli.run_args.command) {
+        let command = if cli.run_args.command.len() > 1 {
+            Some(cli.run_args.command[1..].to_vec())
+        } else {
+            Some(Vec::new())
+        };
+        return run_alias_named(alias_name, &cli.run_args, command);
     }
 
     let config = build_runtime_config(&cli.run_args, None, None)?;
@@ -186,24 +200,33 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_alias_fallback(tokens: &[String], run_args: &RunArgs) -> Result<()> {
-    let alias_name = tokens
-        .first()
-        .context("missing alias token from external command")?;
-    let profile = resolve_profile_for_alias(alias_name)?;
-    let Some(profile) = profile else {
-        anyhow::bail!("unknown command or alias: {}", alias_name);
-    };
-
-    let command_override = if tokens.len() > 1 {
-        let mut command = tokens[1..].to_vec();
-        if command.first().map(String::as_str) == Some("--") {
-            command.remove(0);
-        }
-        Some(command)
+fn run_external_command(tokens: &[String], run_args: &RunArgs) -> Result<()> {
+    let alias_name = parse_shortcut_alias_name(tokens)
+        .context("unknown command. alias shortcut must use envlock :<name>")?;
+    let command = if tokens.len() > 1 {
+        Some(tokens[1..].to_vec())
     } else {
         Some(Vec::new())
     };
+    run_alias_named(alias_name, run_args, command)
+}
+
+fn run_alias_named(
+    alias_name: &str,
+    run_args: &RunArgs,
+    command_override: Option<Vec<String>>,
+) -> Result<()> {
+    let profile = resolve_profile_for_alias(alias_name)?;
+    let Some(profile) = profile else {
+        anyhow::bail!("unknown alias: {}", alias_name);
+    };
+
+    let command_override = command_override.map(|mut command| {
+        if command.first().map(String::as_str) == Some("--") {
+            command.remove(0);
+        }
+        command
+    });
     let config = build_runtime_config(run_args, Some(PathBuf::from(profile)), command_override)?;
     let app = App::new(config);
     init_logging(app.config().log_level, app.config().log_format)?;
@@ -212,6 +235,15 @@ fn run_alias_fallback(tokens: &[String], run_args: &RunArgs) -> Result<()> {
         process::exit(code);
     }
     Ok(())
+}
+
+fn parse_shortcut_alias_name(tokens: &[String]) -> Option<&str> {
+    let first = tokens.first()?;
+    let name = first.strip_prefix(':')?;
+    if name.is_empty() {
+        return None;
+    }
+    Some(name)
 }
 
 fn build_runtime_config(

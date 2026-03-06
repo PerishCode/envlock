@@ -1,6 +1,6 @@
 # Quick Reference
 
-Most-used commands for v0.3.0.
+Most-used commands for v0.4.0.
 
 ## Run Flow
 
@@ -39,7 +39,7 @@ echo $?
 envlock self-update --check
 envlock self-update
 envlock self-update --yes
-envlock self-update --version v0.3.0 --yes
+envlock self-update --version v0.4.0 --yes
 ```
 
 ## Profiles and Alias
@@ -55,8 +55,11 @@ envlock profiles init --type minimal
 envlock alias append work --profile ~/.envlock/profiles/work.json
 envlock alias list
 
-# fallback to alias profile
-envlock work
+# explicit run
+envlock alias run work
+
+# shortcut run
+envlock :work
 ```
 
 ## Install and Uninstall

@@ -10,7 +10,8 @@ envlock profiles status
 envlock profiles init --type <minimal|sample> [--name <name>] [--force]
 envlock alias list
 envlock alias append <name> --profile <path>
-envlock <alias> [-- <cmd...>]
+envlock alias run <name> [-- <cmd...>]
+envlock :<alias> [-- <cmd...>]
 ```
 
 ## 主命令选项
@@ -61,7 +62,8 @@ envlock <alias> [-- <cmd...>]
 
 - `alias list`：列出 `$ENVLOCK_HOME/aliases.json` 中的 alias 映射。
 - `alias append <name> --profile <path>`：追加 alias（同名时失败）。
-- `envlock <alias>`：当 `<alias>` 不是内置命令时，自动回退到 alias profile。
+- `alias run <name>`：按 alias 执行，可选传入子命令覆盖。
+- `envlock :<alias>`：`envlock alias run <alias>` 的快捷写法。
 
 ## 退出行为
 

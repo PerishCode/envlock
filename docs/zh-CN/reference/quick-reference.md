@@ -1,6 +1,6 @@
 # 快速参考
 
-面向 v0.3.0 的高频命令速查。
+面向 v0.4.0 的高频命令速查。
 
 ## 日常运行
 
@@ -39,7 +39,7 @@ echo $?
 envlock self-update --check
 envlock self-update
 envlock self-update --yes
-envlock self-update --version v0.3.0 --yes
+envlock self-update --version v0.4.0 --yes
 ```
 
 ## Profiles 与 Alias
@@ -55,8 +55,11 @@ envlock profiles init --type minimal
 envlock alias append work --profile ~/.envlock/profiles/work.json
 envlock alias list
 
-# 直接通过 alias 运行
-envlock work
+# 显式执行
+envlock alias run work
+
+# 快捷执行
+envlock :work
 ```
 
 ## 安装与卸载

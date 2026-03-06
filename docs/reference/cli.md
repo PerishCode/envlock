@@ -10,7 +10,8 @@ envlock profiles status
 envlock profiles init --type <minimal|sample> [--name <name>] [--force]
 envlock alias list
 envlock alias append <name> --profile <path>
-envlock <alias> [-- <cmd...>]
+envlock alias run <name> [-- <cmd...>]
+envlock :<alias> [-- <cmd...>]
 ```
 
 ## Run Command Options
@@ -61,7 +62,8 @@ When `--profile` is omitted, envlock resolves:
 
 - `alias list`: show alias to profile mappings from `$ENVLOCK_HOME/aliases.json`.
 - `alias append <name> --profile <path>`: append one alias mapping (fails on duplicate name).
-- `envlock <alias>`: fallback to alias profile when `<alias>` is not a built-in command.
+- `alias run <name>`: run by alias with optional child command override.
+- `envlock :<alias>`: shortcut for `envlock alias run <alias>`.
 
 ## Exit Behavior
 
