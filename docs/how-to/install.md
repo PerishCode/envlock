@@ -9,7 +9,7 @@ curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/ins
 ## Install a Specific Version
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh -s -- --version v0.3.0
+curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh -s -- --version v0.4.0
 ```
 
 ## Installed Paths
@@ -22,6 +22,18 @@ curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/ins
 ```bash
 envlock --version
 which envlock
+```
+
+## Install Skill Package
+
+```bash
+envlock skill install --yes
+```
+
+Optional install destination override:
+
+```bash
+ENVLOCK_SKILL_INSTALL_HOME="$HOME/.envlock/skills" envlock skill install --yes
 ```
 
 ## Platform Notes

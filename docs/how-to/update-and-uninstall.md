@@ -20,10 +20,16 @@ Non-interactive:
 envlock self-update --yes
 ```
 
+After upgrade, sync matching skill package:
+
+```bash
+envlock skill install --yes
+```
+
 Pin to specific version:
 
 ```bash
-envlock self-update --version v0.3.0 --yes
+envlock self-update --version v0.4.0 --yes
 ```
 
 ## Uninstall

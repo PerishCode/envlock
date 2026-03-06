@@ -48,6 +48,12 @@ if [ -n "$release_json" ]; then
     fail "latest_release_has_tar_gz_asset"
   fi
 
+  if printf '%s' "$release_json" | jq -e 'any(.assets[]?; (.name | test("^skill-v[0-9]+\\.[0-9]+\\.[0-9]+\\.zip$")))' >/dev/null; then
+    pass "latest_release_has_skill_zip_asset"
+  else
+    printf 'WARN latest_release_has_skill_zip_asset (not required before next tagged release)\n' >&2
+  fi
+
   if printf '%s' "$release_json" | jq -e 'any(.assets[]?; .name == "checksums.txt")' >/dev/null; then
     pass "latest_release_has_checksums_asset"
   else

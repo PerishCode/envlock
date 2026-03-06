@@ -13,15 +13,15 @@
    - `x86_64-unknown-linux-gnu`
    - `x86_64-apple-darwin`
    - `aarch64-apple-darwin`
-3. 生成二进制压缩包与 `checksums.txt`。
+3. 生成二进制压缩包、`skill-vX.Y.Z.zip` 与 `checksums.txt`。
 4. 将产物发布到 GitHub Release。
 
 ## 维护者步骤
 
 ```bash
 # 合并改动并更新 Cargo.toml 版本后
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 ## 破坏性变更规则

@@ -13,15 +13,15 @@
    - `x86_64-unknown-linux-gnu`
    - `x86_64-apple-darwin`
    - `aarch64-apple-darwin`
-3. Binary archives and `checksums.txt` are generated.
+3. Binary archives, `skill-vX.Y.Z.zip`, and `checksums.txt` are generated.
 4. Artifacts are published to GitHub Release.
 
 ## Maintainer Steps
 
 ```bash
 # after merging changes and bumping Cargo.toml version
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 ## Breaking Change Rule

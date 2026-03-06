@@ -15,6 +15,7 @@ const REPO_OWNER: &str = "PerishCode";
 const REPO_NAME: &str = "envlock";
 const DOCS_CHANGELOG_URL: &str = "https://perishcode.github.io/envlock/changelog";
 const DOCS_CHANGELOG_FEED_URL: &str = "https://perishcode.github.io/envlock/changelog-lite.json";
+const DOCS_SKILL_INSTALL_URL: &str = "https://perishcode.github.io/envlock/how-to/install";
 
 #[derive(Debug, Clone)]
 pub struct SelfUpdateOptions {
@@ -66,6 +67,10 @@ pub fn run(options: SelfUpdateOptions) -> Result<()> {
     if options.check_only {
         println!("Update available: v{} -> {}", current, release.tag_name);
         print_release_notes(&release, docs_changelog.as_ref());
+        println!(
+            "Tip: run `envlock skill install --version {} --yes` after update to sync skills.",
+            release.tag_name
+        );
         if let Err(err) = resolve_update_target_path() {
             eprintln!("note: {}", err);
         }
@@ -107,6 +112,11 @@ pub fn run(options: SelfUpdateOptions) -> Result<()> {
 
     println!("Updated envlock to {}", release.tag_name);
     print_release_notes(&release, docs_changelog.as_ref());
+    println!(
+        "Tip: run `envlock skill install --version {} --yes` to install matching skills.",
+        release.tag_name
+    );
+    println!("Skill install docs: {}", DOCS_SKILL_INSTALL_URL);
     Ok(())
 }
 

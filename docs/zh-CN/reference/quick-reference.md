@@ -40,6 +40,9 @@ envlock self-update --check
 envlock self-update
 envlock self-update --yes
 envlock self-update --version v0.4.0 --yes
+
+# 同步安装 skill 包
+envlock skill install --yes
 ```
 
 ## Profiles 与 Alias

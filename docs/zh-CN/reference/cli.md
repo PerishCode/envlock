@@ -6,6 +6,7 @@
 envlock [--profile <path>] [--output <shell|json>] [--strict] [-- <cmd...>]
 envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
+envlock skill install [--version <x.y.z|vX.Y.Z>] [--force] [-y|--yes]
 envlock profiles status
 envlock profiles init --type <minimal|sample> [--name <name>] [--force]
 envlock alias list
@@ -37,6 +38,20 @@ envlock :<alias> [-- <cmd...>]
 | `--check` | 仅检查是否有新版本，不安装。 |
 | `--version <x.y.z|vX.Y.Z>` | 安装指定版本。 |
 | `-y, --yes` | 跳过确认提示。 |
+
+## `skill install` 选项
+
+| 选项 | 说明 |
+| --- | --- |
+| `--version <x.y.z|vX.Y.Z>` | 安装指定 release 版本对应的 skill 包。 |
+| `--force` | 覆盖同版本已存在的 skill 目录。 |
+| `-y, --yes` | 当使用 `--force` 时跳过覆盖确认。 |
+
+skill 安装路径优先级：
+
+1. `ENVLOCK_SKILL_INSTALL_HOME`
+2. `$ENVLOCK_HOME/skills`
+3. `~/.envlock/skills`
 
 ## `preview` 选项
 

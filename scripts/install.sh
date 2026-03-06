@@ -141,6 +141,8 @@ ln -snf "${BIN_PATH}" "${LINK_PATH}"
 
 echo "Installed envlock ${VERSION} to ${BIN_PATH}"
 echo "Linked ${LINK_PATH} -> ${BIN_PATH}"
+echo "Next: run envlock skill install --yes"
+echo "Tip: set ENVLOCK_SKILL_INSTALL_HOME to override skill destination"
 if [[ ":${PATH}:" != *":${LOCAL_BIN_DIR}:"* ]]; then
   echo "Note: ${LOCAL_BIN_DIR} is not in PATH."
   echo "Add it manually to your shell profile when convenient."

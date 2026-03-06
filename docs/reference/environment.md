@@ -6,6 +6,7 @@
 | --- | --- |
 | `ENVLOCK_HOME` | Base directory for default profile resolution (`profiles/default.json`). |
 | `ENVLOCK_RESOURCE_HOME` | Base directory for `resource://` and `resource-content://`. |
+| `ENVLOCK_SKILL_INSTALL_HOME` | Override target root for `envlock skill install` (default: `$ENVLOCK_HOME/skills`). |
 | `HOME` | Fallback base for default profile/resource directories. |
 
 ## Default Paths

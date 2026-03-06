@@ -104,8 +104,67 @@ jobs:
             dist/*.tar.gz
             dist/checksums.txt
 
+  package-skill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag matches Cargo version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          crate_version="$(
+            awk '
+              BEGIN { in_package=0 }
+              /^\[package\]/ { in_package=1; next }
+              /^\[/ && in_package { exit }
+              in_package && $0 ~ /^version[[:space:]]*=/ {
+                gsub(/"/, "", $0)
+                sub(/^version[[:space:]]*=[[:space:]]*/, "", $0)
+                print $0
+                exit
+              }
+            ' Cargo.toml
+          )"
+          if [[ -z "${crate_version}" ]]; then
+            echo "failed to parse package.version from Cargo.toml" >&2
+            exit 1
+          fi
+          expected_tag="v${crate_version}"
+          if [[ "${TAG}" != "${expected_tag}" ]]; then
+            echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
+            exit 1
+          fi
+
+      - name: Build skill zip
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          bash scripts/build-skill-zip.sh "${VERSION}"
+
+      - name: Compute skill checksum
+        working-directory: dist
+        run: |
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "skill-${{ github.ref_name }}.zip" > checksums.txt
+          else
+            shasum -a 256 "skill-${{ github.ref_name }}.zip" > checksums.txt
+          fi
+
+      - name: Upload skill artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-skill
+          path: |
+            dist/skill-${{ github.ref_name }}.zip
+            dist/checksums.txt
+
   publish:
-    needs: build
+    needs:
+      - build
+      - package-skill
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -124,4 +183,5 @@ jobs:
         with:
           files: |
             dist/**/*.tar.gz
+            dist/**/*.zip
             dist/checksums.txt

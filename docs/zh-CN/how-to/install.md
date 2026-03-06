@@ -9,7 +9,7 @@ curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/ins
 ## 安装指定版本
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh -s -- --version v0.3.0
+curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/install.sh | sh -s -- --version v0.4.0
 ```
 
 ## 安装后路径
@@ -22,6 +22,18 @@ curl -fsSL https://raw.githubusercontent.com/PerishCode/envlock/main/scripts/ins
 ```bash
 envlock --version
 which envlock
+```
+
+## 安装 Skill 包
+
+```bash
+envlock skill install --yes
+```
+
+可选：覆盖安装目录
+
+```bash
+ENVLOCK_SKILL_INSTALL_HOME="$HOME/.envlock/skills" envlock skill install --yes
 ```
 
 ## 平台说明

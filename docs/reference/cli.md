@@ -6,6 +6,7 @@
 envlock [--profile <path>] [--output <shell|json>] [--strict] [-- <cmd...>]
 envlock preview --profile <path> [--output <text|json>]
 envlock self-update [--check] [--version <x.y.z|vX.Y.Z>] [-y|--yes]
+envlock skill install [--version <x.y.z|vX.Y.Z>] [--force] [-y|--yes]
 envlock profiles status
 envlock profiles init --type <minimal|sample> [--name <name>] [--force]
 envlock alias list
@@ -37,6 +38,20 @@ When `--profile` is omitted, envlock resolves:
 | `--check` | Check availability only; no install. |
 | `--version <x.y.z|vX.Y.Z>` | Install exact release version. |
 | `-y, --yes` | Skip confirmation prompt. |
+
+## `skill install` Options
+
+| Option | Description |
+| --- | --- |
+| `--version <x.y.z|vX.Y.Z>` | Install skill package from exact release version. |
+| `--force` | Overwrite existing installed skill directory for the same version. |
+| `-y, --yes` | Skip overwrite confirmation prompt when `--force` is used. |
+
+Skill install destination order:
+
+1. `ENVLOCK_SKILL_INSTALL_HOME`
+2. `$ENVLOCK_HOME/skills`
+3. `~/.envlock/skills`
 
 ## `preview` Options
 

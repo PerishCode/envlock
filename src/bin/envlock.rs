@@ -13,6 +13,7 @@ use envlock::commands::profiles::{
     run_status as run_profiles_status,
 };
 use envlock::commands::self_update::{SelfUpdateOptions, run as run_self_update};
+use envlock::commands::skill::{SkillInstallOptions, run_install as run_skill_install};
 use envlock::core::app::{App, AppContext};
 use envlock::core::config::{
     CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig,
@@ -41,6 +42,7 @@ enum Commands {
     Preview(PreviewArgs),
     Profiles(ProfilesArgs),
     Alias(AliasArgs),
+    Skill(SkillArgs),
     #[command(external_subcommand)]
     External(Vec<String>),
 }
@@ -96,6 +98,29 @@ struct AliasRunArgs {
 
     #[arg(trailing_var_arg = true)]
     command: Vec<String>,
+}
+
+#[derive(Debug, Args)]
+struct SkillArgs {
+    #[command(subcommand)]
+    command: SkillSubcommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum SkillSubcommand {
+    Install(SkillInstallArgs),
+}
+
+#[derive(Debug, Args)]
+struct SkillInstallArgs {
+    #[arg(long = "version")]
+    version: Option<String>,
+
+    #[arg(long = "force")]
+    force: bool,
+
+    #[arg(long = "yes", short = 'y')]
+    yes: bool,
 }
 
 #[derive(Debug, Args)]
@@ -176,6 +201,13 @@ fn main() -> Result<()> {
                 AliasSubcommand::Run(run_args) => {
                     run_alias_named(&run_args.name, &cli.run_args, Some(run_args.command))
                 }
+            },
+            Commands::Skill(args) => match args.command {
+                SkillSubcommand::Install(install) => run_skill_install(SkillInstallOptions {
+                    version: install.version,
+                    force: install.force,
+                    yes: install.yes,
+                }),
             },
             Commands::External(tokens) => run_external_command(&tokens, &cli.run_args),
         };

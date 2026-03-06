@@ -6,6 +6,7 @@
 | --- | --- |
 | `ENVLOCK_HOME` | 默认 profile 解析的基目录（`profiles/default.json`）。 |
 | `ENVLOCK_RESOURCE_HOME` | `resource://` 与 `resource-content://` 的资源基目录。 |
+| `ENVLOCK_SKILL_INSTALL_HOME` | 覆盖 `envlock skill install` 的安装根目录（默认：`$ENVLOCK_HOME/skills`）。 |
 | `HOME` | 默认 profile/资源目录的兜底基目录。 |
 
 ## 默认路径

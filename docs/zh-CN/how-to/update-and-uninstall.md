@@ -20,10 +20,16 @@ envlock self-update
 envlock self-update --yes
 ```
 
+升级后可同步安装匹配 skill 包：
+
+```bash
+envlock skill install --yes
+```
+
 固定到指定版本：
 
 ```bash
-envlock self-update --version v0.3.0 --yes
+envlock self-update --version v0.4.0 --yes
 ```
 
 ## 卸载
