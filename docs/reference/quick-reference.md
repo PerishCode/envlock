@@ -1,6 +1,6 @@
 # Quick Reference
 
-Most-used commands for v0.4.2.
+Most-used commands for v0.4.3.
 
 ## Run Flow
 
@@ -39,7 +39,7 @@ echo $?
 envlock self-update --check
 envlock self-update
 envlock self-update --yes
-envlock self-update --version v0.4.2 --yes
+envlock self-update --version v0.4.3 --yes
 
 # sync skill package
 envlock skill install --yes
