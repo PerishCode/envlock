@@ -1,6 +1,6 @@
 [package]
 name = "envlock"
-version = "0.4.6-beta.8"
+version = "0.4.6-beta.9"
 edition = "2024"
 
 [dependencies]

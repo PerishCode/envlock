@@ -201,6 +201,24 @@ tool_cache_dir() {
   printf '%s/cache/%s/v%s' "$STATE_DIR" "$tool" "$version"
 }
 
+write_wrapper() {
+  local path="$1"
+  local real_bin="$2"
+  local extra_env="$3"
+  local node_dir="$(tool_version_dir node "$NODE_VERSION")/bin"
+  local npm_global_bin="$(tool_version_dir npm "$NPM_VERSION")/global/bin"
+
+  run_state_op "prepare wrapper dir" mkdir -p "$(dirname "$path")"
+  cat > "$path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="$(json_escape "$node_dir"):$(json_escape "$CURRENT_BIN_DIR"):$(json_escape "$npm_global_bin")\${PATH:+:\$PATH}"
+$extra_env
+exec "$(json_escape "$real_bin")" "\$@"
+EOF
+  run_state_op "set wrapper executable" chmod 755 "$path"
+}
+
 write_state() {
   local node_bin="$1" node_version="$2"
   local npm_bin="$3" npm_version="$4"
@@ -328,6 +346,10 @@ emit_patch() {
   local pnpm_bin="$5" pnpm_version="$6"
   local yarn_bin="$7" yarn_version="$8"
 
+  local node_wrapper="$(tool_version_dir node "$node_version")/bin/node"
+  local npm_wrapper="$(tool_version_dir npm "$npm_version")/bin/npm"
+  local pnpm_wrapper="$(tool_version_dir pnpm "$pnpm_version")/bin/pnpm"
+  local yarn_wrapper="$(tool_version_dir yarn "$yarn_version")/bin/yarn"
   local current_node="$CURRENT_BIN_DIR/node"
   local current_npm="$CURRENT_BIN_DIR/npm"
   local current_pnpm="$CURRENT_BIN_DIR/pnpm"
@@ -342,21 +364,19 @@ emit_patch() {
     { "op": "set", "key": "NPM_CONFIG_CACHE", "value": "$(json_escape "$(tool_cache_dir npm "$npm_version")")" },
     { "op": "set", "key": "NPM_CONFIG_PREFIX", "value": "$(json_escape "$(tool_version_dir npm "$npm_version")/global")" },
     { "op": "set", "key": "PNPM_HOME", "value": "$(json_escape "$CURRENT_BIN_DIR")" },
-    { "op": "set", "key": "npm_config_store_dir", "value": "$(json_escape "$(tool_cache_dir pnpm "$pnpm_version")/store")" },
     { "op": "set", "key": "YARN_CACHE_FOLDER", "value": "$(json_escape "$(tool_cache_dir yarn "$yarn_version")")" },
-    { "op": "set", "key": "YARN_GLOBAL_FOLDER", "value": "$(json_escape "$(tool_version_dir yarn "$yarn_version")/global")" },
     { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$(tool_version_dir npm "$npm_version")/global/bin")", "separator": ":" },
     { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$CURRENT_BIN_DIR")", "separator": ":" }
   ],
   "symlink": [
-    { "op": "ensure", "source": "$(json_escape "$node_bin")", "target": "$(json_escape "$current_node")", "on_exist": "replace" },
-    { "op": "ensure", "source": "$(json_escape "$npm_bin")", "target": "$(json_escape "$current_npm")", "on_exist": "replace" },
-    { "op": "ensure", "source": "$(json_escape "$pnpm_bin")", "target": "$(json_escape "$current_pnpm")", "on_exist": "replace" },
-    { "op": "ensure", "source": "$(json_escape "$yarn_bin")", "target": "$(json_escape "$current_yarn")", "on_exist": "replace" }
+    { "op": "ensure", "source": "$(json_escape "$node_wrapper")", "target": "$(json_escape "$current_node")", "on_exist": "replace" },
+    { "op": "ensure", "source": "$(json_escape "$npm_wrapper")", "target": "$(json_escape "$current_npm")", "on_exist": "replace" },
+    { "op": "ensure", "source": "$(json_escape "$pnpm_wrapper")", "target": "$(json_escape "$current_pnpm")", "on_exist": "replace" },
+    { "op": "ensure", "source": "$(json_escape "$yarn_wrapper")", "target": "$(json_escape "$current_yarn")", "on_exist": "replace" }
   ]
 }
 EOF
-  log_info "patch emitted env_count=10 symlink_count=4"
+  log_info "patch emitted env_count=8 symlink_count=4"
 }
 
 resolve_all_tools() {
@@ -398,10 +418,15 @@ prepare_version_dirs() {
 }
 
 link_versions() {
+  local npm_prefix="$(tool_version_dir npm "$NPM_VERSION")/global"
+  local pnpm_store_dir="$(tool_cache_dir pnpm "$PNPM_VERSION")/store"
+  local yarn_cache_dir="$(tool_cache_dir yarn "$YARN_VERSION")"
+  local yarn_global_dir="$(tool_version_dir yarn "$YARN_VERSION")/global"
+
   run_state_op "link node version" ln -sfn "$NODE_BIN" "$(tool_version_dir node "$NODE_VERSION")/bin/node"
-  run_state_op "link npm version" ln -sfn "$NPM_BIN" "$(tool_version_dir npm "$NPM_VERSION")/bin/npm"
-  run_state_op "link pnpm version" ln -sfn "$PNPM_BIN" "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm"
-  run_state_op "link yarn version" ln -sfn "$YARN_BIN" "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn"
+  write_wrapper "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$NPM_BIN" "export NPM_CONFIG_CACHE=\"$(json_escape "$(tool_cache_dir npm "$NPM_VERSION")")\"; export NPM_CONFIG_PREFIX=\"$(json_escape "$npm_prefix")\""
+  write_wrapper "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm" "$PNPM_BIN" "export PNPM_HOME=\"$(json_escape "$CURRENT_BIN_DIR")\"; export npm_config_store_dir=\"$(json_escape "$pnpm_store_dir")\""
+  write_wrapper "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn" "$YARN_BIN" "export YARN_CACHE_FOLDER=\"$(json_escape "$yarn_cache_dir")\"; export YARN_GLOBAL_FOLDER=\"$(json_escape "$yarn_global_dir")\"; export PREFIX=\"$(json_escape "$npm_prefix")\"; export npm_config_prefix=\"$(json_escape "$npm_prefix")\""
 
   run_state_op "refresh current node link" ln -sfn "$(tool_version_dir node "$NODE_VERSION")/bin/node" "$CURRENT_BIN_DIR/node"
   run_state_op "refresh current npm link" ln -sfn "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$CURRENT_BIN_DIR/npm"
