@@ -1,0 +1,12 @@
+name: Release Beta
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: |
+          echo "release-beta placeholder workflow registered on default branch"
