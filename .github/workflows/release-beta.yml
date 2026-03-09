@@ -22,6 +22,9 @@ env:
 jobs:
   validate-version:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -78,6 +81,9 @@ jobs:
             target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     container: ubuntu:22.04
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -146,6 +152,9 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -201,6 +210,9 @@ jobs:
   package-skill:
     needs: validate-version
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -235,6 +247,9 @@ jobs:
       - build-darwin
       - package-skill
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
