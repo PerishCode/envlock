@@ -165,11 +165,9 @@ fn plugin_node_preview_and_apply_emit_patch() {
     assert!(state_dir.join("versions/node/v24.12.0/bin/node").exists());
     assert!(state_dir.join("versions/npm/v10.9.2/bin/npm").exists());
     assert!(state_dir.join("versions/npm/v10.9.2/global/bin").is_dir());
-    assert!(
-        state_dir
-            .join("versions/npm/v10.9.2/global/lib/node_modules")
-            .is_dir()
-    );
+    assert!(state_dir
+        .join("versions/npm/v10.9.2/global/lib/node_modules")
+        .is_dir());
     assert!(state_dir.join("versions/pnpm/v10.30.3/bin/pnpm").exists());
     assert!(state_dir.join("versions/yarn/v1.22.22/bin/yarn").exists());
     assert!(state_dir.join("versions/yarn/v1.22.22/global").is_dir());
@@ -585,6 +583,19 @@ fn plugin_node_apply_reports_read_only_state_dir_as_permission_error() {
         .env("ENVLOCK_HOME", &envlock_home)
         .output()
         .expect("apply command should run");
+
+    if apply.status.success() {
+        let uid_output = Command::new("id")
+            .arg("-u")
+            .output()
+            .expect("id command should run");
+        let uid = String::from_utf8(uid_output.stdout)
+            .expect("uid output should be UTF-8")
+            .trim()
+            .to_owned();
+        assert_eq!(uid, "0", "readonly state dir should only succeed as root");
+        return;
+    }
 
     assert_eq!(apply.status.code(), Some(74));
     let stderr = String::from_utf8(apply.stderr).expect("stderr should be UTF-8");
