@@ -160,7 +160,11 @@ require_resolved_tool() {
 resolve_tool_version() {
   local bin="$1"
   local raw
-  if ! raw="$($bin --version 2>/dev/null)"; then
+  local node_bin_dir=""
+  if [[ -n "${NODE_BIN:-}" ]]; then
+    node_bin_dir="$(dirname "$NODE_BIN")"
+  fi
+  if ! raw="$(PATH="${node_bin_dir}${node_bin_dir:+:}$PATH" "$bin" --version 2>/dev/null)"; then
     return 1
   fi
   log_info "version bin=$bin raw=$raw"

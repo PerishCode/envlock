@@ -16,6 +16,27 @@ fn write_fake_tool(path: &std::path::Path, version: &str) {
     }
 }
 
+fn write_path_bound_manager(path: &std::path::Path, version: &str) {
+    std::fs::write(
+        path,
+        format!(
+            "#!/usr/bin/env sh\nnode >/dev/null 2>&1\nprintf '{}\\n'\n",
+            version
+        ),
+    )
+    .expect("path-bound manager should be written");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = std::fs::metadata(path)
+            .expect("path-bound manager metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(path, permissions)
+            .expect("path-bound manager should be executable");
+    }
+}
+
 #[test]
 fn plugin_node_init_creates_embedded_script() {
     let temp = TempDir::new().expect("temp dir should be created");
@@ -128,6 +149,70 @@ fn plugin_node_preview_and_apply_emit_patch() {
     assert!(state_dir.join("versions/pnpm/v10.30.3/bin/pnpm").exists());
     assert!(state_dir.join("versions/yarn/v1.22.22/bin/yarn").exists());
     assert!(state_dir.join("state.v2.json").is_file());
+}
+
+#[test]
+fn plugin_node_apply_uses_selected_node_for_manager_version_resolution() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let node_dir = temp.path().join("node-bin-dir");
+    let node_bin = node_dir.join("node");
+    let npm_bin = temp.path().join("fake-npm.sh");
+    let pnpm_bin = temp.path().join("fake-pnpm.sh");
+    let yarn_bin = temp.path().join("fake-yarn.sh");
+
+    std::fs::create_dir_all(&node_dir).expect("node dir should be created");
+    write_fake_tool(&node_bin, "v18.20.8");
+    write_path_bound_manager(&npm_bin, "10.8.2");
+    write_path_bound_manager(&pnpm_bin, "10.30.3");
+    write_path_bound_manager(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+            "--node-bin",
+            node_bin.to_str().expect("node bin path should be UTF-8"),
+            "--npm-bin",
+            npm_bin.to_str().expect("npm bin path should be UTF-8"),
+            "--pnpm-bin",
+            pnpm_bin.to_str().expect("pnpm bin path should be UTF-8"),
+            "--yarn-bin",
+            yarn_bin.to_str().expect("yarn bin path should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .env("PATH", "/usr/bin:/bin")
+        .output()
+        .expect("apply command should run");
+
+    assert!(
+        apply.status.success(),
+        "apply should succeed with explicit node bin, stderr: {}",
+        String::from_utf8_lossy(&apply.stderr)
+    );
+    let state = std::fs::read_to_string(state_dir.join("state.v2.json"))
+        .expect("state file should be readable");
+    assert!(state.contains("\"version\": \"18.20.8\""));
+    assert!(state.contains("\"version\": \"10.8.2\""));
+    assert!(state.contains("\"version\": \"10.30.3\""));
+    assert!(state.contains("\"version\": \"1.22.22\""));
 }
 
 #[test]
