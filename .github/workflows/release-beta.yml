@@ -1,9 +1,17 @@
-name: Release
+name: Release Beta
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Beta tag to publish (must match Cargo.toml version, with optional leading v)
+        required: true
+        type: string
+      notes:
+        description: Optional beta release notes
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -12,7 +20,54 @@ env:
   TOOLS: "envlock"
 
 jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalize and validate beta version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_VERSION}"
+          if [[ "${version}" != v* ]]; then
+            version="v${version}"
+          fi
+          if [[ ! "${version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then
+            echo "version must match vX.Y.Z-beta.N" >&2
+            exit 1
+          fi
+          crate_version="$(
+            awk '
+              BEGIN { in_package=0 }
+              /^\[package\]/ { in_package=1; next }
+              /^\[/ && in_package { exit }
+              in_package && $0 ~ /^version[[:space:]]*=/ {
+                gsub(/"/, "", $0)
+                sub(/^version[[:space:]]*=[[:space:]]*/, "", $0)
+                print $0
+                exit
+              }
+            ' Cargo.toml
+          )"
+          if [[ -z "${crate_version}" ]]; then
+            echo "failed to parse package.version from Cargo.toml" >&2
+            exit 1
+          fi
+          expected="v${crate_version}"
+          if [[ "${version}" != "${expected}" ]]; then
+            echo "beta version mismatch: got ${version}, expected ${expected}" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: validate-version
     strategy:
       fail-fast: false
       matrix:
@@ -36,38 +91,6 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Validate tag matches Cargo version
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          crate_version="$(
-            awk '
-              BEGIN { in_package=0 }
-              /^\[package\]/ { in_package=1; next }
-              /^\[/ && in_package { exit }
-              in_package && $0 ~ /^version[[:space:]]*=/ {
-                gsub(/"/, "", $0)
-                sub(/^version[[:space:]]*=[[:space:]]*/, "", $0)
-                print $0
-                exit
-              }
-            ' Cargo.toml
-          )"
-          if [[ -z "${crate_version}" ]]; then
-            echo "failed to parse package.version from Cargo.toml" >&2
-            exit 1
-          fi
-          if [[ "${crate_version}" == *-* ]]; then
-            echo "release.yml only publishes stable versions; got prerelease Cargo version ${crate_version}" >&2
-            exit 1
-          fi
-          expected_tag="v${crate_version}"
-          if [[ "${TAG}" != "${expected_tag}" ]]; then
-            echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
-            exit 1
-          fi
-
       - name: Test
         run: cargo test --locked
 
@@ -81,7 +104,7 @@ jobs:
 
       - name: Package archives
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ needs.validate-version.outputs.version }}
           TARGET: ${{ matrix.target }}
         run: |
           mkdir -p dist
@@ -103,52 +126,21 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.target }}
+          name: release-beta-${{ matrix.target }}
           path: |
             dist/*.tar.gz
             dist/checksums.txt
 
   package-skill:
+    needs: validate-version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate tag matches Cargo version
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          crate_version="$(
-            awk '
-              BEGIN { in_package=0 }
-              /^\[package\]/ { in_package=1; next }
-              /^\[/ && in_package { exit }
-              in_package && $0 ~ /^version[[:space:]]*=/ {
-                gsub(/"/, "", $0)
-                sub(/^version[[:space:]]*=[[:space:]]*/, "", $0)
-                print $0
-                exit
-              }
-            ' Cargo.toml
-          )"
-          if [[ -z "${crate_version}" ]]; then
-            echo "failed to parse package.version from Cargo.toml" >&2
-            exit 1
-          fi
-          if [[ "${crate_version}" == *-* ]]; then
-            echo "release.yml only publishes stable versions; got prerelease Cargo version ${crate_version}" >&2
-            exit 1
-          fi
-          expected_tag="v${crate_version}"
-          if [[ "${TAG}" != "${expected_tag}" ]]; then
-            echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
-            exit 1
-          fi
-
       - name: Build skill zip
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ needs.validate-version.outputs.version }}
         run: |
           bash scripts/build-skill-zip.sh "${VERSION}"
 
@@ -156,21 +148,22 @@ jobs:
         working-directory: dist
         run: |
           if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum "skill-${{ github.ref_name }}.zip" > checksums.txt
+            sha256sum "skill-${{ needs.validate-version.outputs.version }}.zip" > checksums.txt
           else
-            shasum -a 256 "skill-${{ github.ref_name }}.zip" > checksums.txt
+            shasum -a 256 "skill-${{ needs.validate-version.outputs.version }}.zip" > checksums.txt
           fi
 
       - name: Upload skill artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-skill
+          name: release-beta-skill
           path: |
-            dist/skill-${{ github.ref_name }}.zip
+            dist/skill-${{ needs.validate-version.outputs.version }}.zip
             dist/checksums.txt
 
   publish:
     needs:
+      - validate-version
       - build
       - package-skill
     runs-on: ubuntu-latest
@@ -186,9 +179,14 @@ jobs:
           find dist -name '*.txt' -type f ! -path 'dist/checksums.txt' -exec cat {} + > "${tmp_checksums}"
           sort -k2 "${tmp_checksums}" | uniq > dist/checksums.txt
 
-      - name: Publish GitHub release
+      - name: Publish GitHub beta release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.validate-version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          generate_release_notes: true
+          body: ${{ inputs.notes }}
           files: |
             dist/**/*.tar.gz
             dist/**/*.zip
