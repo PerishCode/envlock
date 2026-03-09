@@ -238,7 +238,7 @@ emit_patch() {
     { "op": "set", "key": "NPM_CONFIG_CACHE", "value": "$(json_escape "$(tool_cache_dir npm "$npm_version")")" },
     { "op": "set", "key": "NPM_CONFIG_PREFIX", "value": "$(json_escape "$(tool_version_dir npm "$npm_version")/global")" },
     { "op": "set", "key": "PNPM_HOME", "value": "$(json_escape "$CURRENT_BIN_DIR")" },
-    { "op": "set", "key": "PNPM_STORE_PATH", "value": "$(json_escape "$(tool_cache_dir pnpm "$pnpm_version")/store")" },
+    { "op": "set", "key": "npm_config_store_dir", "value": "$(json_escape "$(tool_cache_dir pnpm "$pnpm_version")/store")" },
     { "op": "set", "key": "YARN_CACHE_FOLDER", "value": "$(json_escape "$(tool_cache_dir yarn "$yarn_version")")" },
     { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$CURRENT_BIN_DIR")", "separator": ":" }
   ],
@@ -280,6 +280,8 @@ prepare_version_dirs() {
     "$(tool_version_dir node "$NODE_VERSION")/bin" \
     "$(tool_version_dir npm "$NPM_VERSION")/bin" \
     "$(tool_version_dir npm "$NPM_VERSION")/global" \
+    "$(tool_version_dir npm "$NPM_VERSION")/global/bin" \
+    "$(tool_version_dir npm "$NPM_VERSION")/global/lib/node_modules" \
     "$(tool_version_dir pnpm "$PNPM_VERSION")/bin" \
     "$(tool_version_dir yarn "$YARN_VERSION")/bin" \
     "$(tool_cache_dir npm "$NPM_VERSION")" \

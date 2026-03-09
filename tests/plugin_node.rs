@@ -91,7 +91,7 @@ fn plugin_node_preview_and_apply_emit_patch() {
     let stdout = String::from_utf8(preview.stdout).expect("stdout should be UTF-8");
     assert!(stdout.contains("\"schema\": \"envlock.patch.v1\""));
     assert!(stdout.contains("\"ENVLOCK_NODE_BIN\""));
-    assert!(stdout.contains("\"PNPM_STORE_PATH\""));
+    assert!(stdout.contains("\"npm_config_store_dir\""));
     assert!(stdout.contains("\"YARN_CACHE_FOLDER\""));
 
     let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
@@ -121,6 +121,10 @@ fn plugin_node_preview_and_apply_emit_patch() {
 
     assert!(state_dir.join("versions/node/v24.12.0/bin/node").exists());
     assert!(state_dir.join("versions/npm/v10.9.2/bin/npm").exists());
+    assert!(state_dir.join("versions/npm/v10.9.2/global/bin").is_dir());
+    assert!(state_dir
+        .join("versions/npm/v10.9.2/global/lib/node_modules")
+        .is_dir());
     assert!(state_dir.join("versions/pnpm/v10.30.3/bin/pnpm").exists());
     assert!(state_dir.join("versions/yarn/v1.22.22/bin/yarn").exists());
     assert!(state_dir.join("state.v2.json").is_file());
