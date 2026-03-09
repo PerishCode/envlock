@@ -67,6 +67,10 @@ jobs:
             echo "beta version mismatch: got ${version}, expected ${expected}" >&2
             exit 1
           fi
+          if [[ ! -f "docs/changelog/${version}.md" ]]; then
+            echo "missing changelog entry: docs/changelog/${version}.md" >&2
+            exit 1
+          fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
   build-linux:

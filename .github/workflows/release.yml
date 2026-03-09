@@ -74,6 +74,10 @@ jobs:
             echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
             exit 1
           fi
+          if [[ ! -f "docs/changelog/${TAG}.md" ]]; then
+            echo "missing changelog entry: docs/changelog/${TAG}.md" >&2
+            exit 1
+          fi
 
       - name: Test
         run: cargo test --locked
@@ -171,6 +175,10 @@ jobs:
             echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
             exit 1
           fi
+          if [[ ! -f "docs/changelog/${TAG}.md" ]]; then
+            echo "missing changelog entry: docs/changelog/${TAG}.md" >&2
+            exit 1
+          fi
 
       - name: Test
         run: cargo test --locked
@@ -250,6 +258,10 @@ jobs:
           expected_tag="v${crate_version}"
           if [[ "${TAG}" != "${expected_tag}" ]]; then
             echo "tag/version mismatch: got ${TAG}, expected ${expected_tag}" >&2
+            exit 1
+          fi
+          if [[ ! -f "docs/changelog/${TAG}.md" ]]; then
+            echo "missing changelog entry: docs/changelog/${TAG}.md" >&2
             exit 1
           fi
 

@@ -76,31 +76,58 @@ normalize_version() {
 }
 
 resolve_tool_bin() {
-  local tool="$1"
-  local override="$2"
+  local __resultvar="$1"
+  local tool="$2"
+  local override="$3"
   if [[ -n "$override" ]]; then
     if [[ -L "$override" && ! -e "$override" ]]; then
       echo "configured $tool binary symlink has invalid or looped target: $override" >&2
-      exit 2
+      return 2
     fi
     [[ -e "$override" ]] || {
       echo "configured $tool binary does not exist or cannot be read: $override" >&2
-      exit 2
+      return 2
     }
     [[ -x "$override" ]] || {
       echo "configured $tool binary is not executable: $override" >&2
-      exit 2
+      return 2
     }
-    printf '%s' "$override"
+    printf -v "$__resultvar" '%s' "$override"
     return 0
   fi
 
   if command -v "$tool" >/dev/null 2>&1; then
-    command -v "$tool"
+    printf -v "$__resultvar" '%s' "$(command -v "$tool")"
     return 0
   fi
 
   return 1
+}
+
+require_resolved_tool() {
+  local __resultvar="$1"
+  local tool="$2"
+  local override="$3"
+  local status=0
+
+  resolve_tool_bin "$__resultvar" "$tool" "$override"
+  status=$?
+  if [[ "$status" -eq 0 ]]; then
+    return 0
+  fi
+
+  case "$status" in
+    1)
+      echo "$tool binary not found (set ENVLOCK_PLUGIN_${tool^^}_BIN or ensure $tool on PATH)" >&2
+      exit 3
+      ;;
+    2)
+      exit 2
+      ;;
+    *)
+      exit "$status"
+      ;;
+  esac
 }
 
 resolve_tool_version() {
@@ -196,10 +223,7 @@ EOF
 }
 
 resolve_all_tools() {
-  NODE_BIN="$(resolve_tool_bin node "$NODE_BIN_OVERRIDE")" || {
-    echo "node binary not found (set ENVLOCK_PLUGIN_NODE_BIN or ensure node on PATH)" >&2
-    exit 3
-  }
+  require_resolved_tool NODE_BIN node "$NODE_BIN_OVERRIDE"
   [[ -x "$NODE_BIN" ]] || {
     echo "node binary is not executable: $NODE_BIN" >&2
     exit 2
@@ -209,18 +233,9 @@ resolve_all_tools() {
     exit 4
   }
 
-  NPM_BIN="$(resolve_tool_bin npm "$NPM_BIN_OVERRIDE")" || {
-    echo "npm binary not found (set ENVLOCK_PLUGIN_NPM_BIN or ensure npm on PATH)" >&2
-    exit 3
-  }
-  PNPM_BIN="$(resolve_tool_bin pnpm "$PNPM_BIN_OVERRIDE")" || {
-    echo "pnpm binary not found (set ENVLOCK_PLUGIN_PNPM_BIN or ensure pnpm on PATH)" >&2
-    exit 3
-  }
-  YARN_BIN="$(resolve_tool_bin yarn "$YARN_BIN_OVERRIDE")" || {
-    echo "yarn binary not found (set ENVLOCK_PLUGIN_YARN_BIN or ensure yarn on PATH)" >&2
-    exit 3
-  }
+  require_resolved_tool NPM_BIN npm "$NPM_BIN_OVERRIDE"
+  require_resolved_tool PNPM_BIN pnpm "$PNPM_BIN_OVERRIDE"
+  require_resolved_tool YARN_BIN yarn "$YARN_BIN_OVERRIDE"
 
   NPM_VERSION="$(resolve_tool_version "$NPM_BIN")" || { echo "failed to resolve npm version" >&2; exit 4; }
   PNPM_VERSION="$(resolve_tool_version "$PNPM_BIN")" || { echo "failed to resolve pnpm version" >&2; exit 4; }

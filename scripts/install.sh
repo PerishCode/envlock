@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 REPO="${ENVLOCK_INSTALL_REPO:-PerishCode/envlock}"
 INSTALL_ROOT="${HOME}/.envlock"
@@ -26,7 +26,6 @@ require_cmd() {
 }
 
 detect_target() {
-  local os arch
   os="$(uname -s)"
   arch="$(uname -m)"
   case "${os}:${arch}" in
@@ -48,37 +47,40 @@ fetch_latest_tag() {
 }
 
 normalize_version() {
-  local raw="$1"
-  if [[ "${raw}" == v* ]]; then
-    printf '%s\n' "${raw}"
-  else
-    printf 'v%s\n' "${raw}"
-  fi
+  raw="$1"
+  case "${raw}" in
+    v*)
+      printf '%s\n' "${raw}"
+      ;;
+    *)
+      printf 'v%s\n' "${raw}"
+      ;;
+  esac
 }
 
 read_checksum() {
-  local checksums_file="$1"
-  local asset_name="$2"
+  checksums_file="$1"
+  asset_name="$2"
   awk -v f="${asset_name}" '$2==f || $2=="*"f {print $1; exit}' "${checksums_file}"
 }
 
 verify_checksum() {
-  local file="$1"
-  local expected="$2"
-  local actual=""
+  file="$1"
+  expected="$2"
+  actual=""
   if command -v sha256sum >/dev/null 2>&1; then
     actual="$(sha256sum "${file}" | awk '{print $1}')"
   else
     actual="$(shasum -a 256 "${file}" | awk '{print $1}')"
   fi
-  if [[ "${actual}" != "${expected}" ]]; then
+  if [ "${actual}" != "${expected}" ]; then
     echo "checksum mismatch: expected ${expected}, got ${actual}" >&2
     exit 1
   fi
 }
 
 VERSION=""
-while [[ $# -gt 0 ]]; do
+while [ "$#" -gt 0 ]; do
   case "$1" in
     --version)
       VERSION="${2:-}"
@@ -101,9 +103,9 @@ require_cmd tar
 require_cmd mktemp
 
 TARGET="$(detect_target)"
-if [[ -z "${VERSION}" ]]; then
+if [ -z "${VERSION}" ]; then
   VERSION="$(fetch_latest_tag)"
-  if [[ -z "${VERSION}" ]]; then
+  if [ -z "${VERSION}" ]; then
     echo "failed to resolve latest release tag" >&2
     exit 1
   fi
@@ -112,7 +114,7 @@ else
 fi
 
 ASSET="envlock-${VERSION}-${TARGET}.tar.gz"
-if [[ -n "${ENVLOCK_INSTALL_BASE_URL:-}" ]]; then
+if [ -n "${ENVLOCK_INSTALL_BASE_URL:-}" ]; then
   BASE_URL="${ENVLOCK_INSTALL_BASE_URL%/}/${VERSION}"
 else
   BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
@@ -121,14 +123,14 @@ ASSET_URL="${BASE_URL}/${ASSET}"
 CHECKSUMS_URL="${BASE_URL}/checksums.txt"
 
 tmp_dir="$(mktemp -d)"
-trap 'rm -rf "${tmp_dir}"' EXIT
+trap 'rm -rf "${tmp_dir}"' 0
 
 echo "Downloading ${ASSET_URL}"
 curl -fsSL -o "${tmp_dir}/${ASSET}" "${ASSET_URL}"
 curl -fsSL -o "${tmp_dir}/checksums.txt" "${CHECKSUMS_URL}"
 
 expected="$(read_checksum "${tmp_dir}/checksums.txt" "${ASSET}")"
-if [[ -z "${expected}" ]]; then
+if [ -z "${expected}" ]; then
   echo "checksum not found for ${ASSET}" >&2
   exit 1
 fi
@@ -136,7 +138,7 @@ verify_checksum "${tmp_dir}/${ASSET}" "${expected}"
 
 mkdir -p "${BIN_DIR}" "${LOCAL_BIN_DIR}"
 tar -xzf "${tmp_dir}/${ASSET}" -C "${tmp_dir}"
-if [[ ! -f "${tmp_dir}/envlock" ]]; then
+if [ ! -f "${tmp_dir}/envlock" ]; then
   echo "release archive missing envlock binary" >&2
   exit 1
 fi
@@ -148,7 +150,10 @@ echo "Installed envlock ${VERSION} to ${BIN_PATH}"
 echo "Linked ${LINK_PATH} -> ${BIN_PATH}"
 echo "Next: run envlock skill install --yes"
 echo "Tip: set ENVLOCK_SKILL_INSTALL_HOME to override skill destination"
-if [[ ":${PATH}:" != *":${LOCAL_BIN_DIR}:"* ]]; then
-  echo "Note: ${LOCAL_BIN_DIR} is not in PATH."
-  echo "Add it manually to your shell profile when convenient."
-fi
+case ":${PATH}:" in
+  *":${LOCAL_BIN_DIR}:"*) ;;
+  *)
+    echo "Note: ${LOCAL_BIN_DIR} is not in PATH."
+    echo "Add it manually to your shell profile when convenient."
+    ;;
+esac

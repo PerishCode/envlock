@@ -179,6 +179,10 @@ fn plugin_node_preview_reports_missing_override_binary() {
         stderr.contains("configured node binary does not exist or cannot be read"),
         "stderr should contain actionable missing binary error, got: {stderr}"
     );
+    assert!(
+        !stderr.contains("node binary not found"),
+        "stderr should not contain generic PATH fallback error when override is set, got: {stderr}"
+    );
 }
 
 #[test]
@@ -284,5 +288,70 @@ fn plugin_node_preview_rejects_looped_symlink_override() {
     assert!(
         stderr.contains("configured node binary symlink has invalid or looped target"),
         "stderr should contain looped symlink error, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("node binary not found"),
+        "stderr should not contain generic PATH fallback error when override is set, got: {stderr}"
+    );
+}
+
+#[test]
+fn plugin_node_preview_rejects_non_executable_override_without_fallback_message() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let node_bin = temp.path().join("fake-node.sh");
+    let npm_bin = temp.path().join("fake-npm.sh");
+    let pnpm_bin = temp.path().join("fake-pnpm.sh");
+    let yarn_bin = temp.path().join("fake-yarn.sh");
+
+    std::fs::write(&node_bin, "#!/usr/bin/env bash\necho v24.12.0\n")
+        .expect("fake node script should be written");
+    write_fake_tool(&npm_bin, "10.9.2");
+    write_fake_tool(&pnpm_bin, "10.30.3");
+    write_fake_tool(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    let preview = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "preview",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+            "--node-bin",
+            node_bin.to_str().expect("node bin path should be UTF-8"),
+            "--npm-bin",
+            npm_bin.to_str().expect("npm bin path should be UTF-8"),
+            "--pnpm-bin",
+            pnpm_bin.to_str().expect("pnpm bin path should be UTF-8"),
+            "--yarn-bin",
+            yarn_bin.to_str().expect("yarn bin path should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("preview command should run");
+
+    assert!(!preview.status.success());
+    let stderr = String::from_utf8(preview.stderr).expect("stderr should be UTF-8");
+    assert!(
+        stderr.contains("configured node binary is not executable"),
+        "stderr should contain non-executable override error, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("node binary not found"),
+        "stderr should not contain generic PATH fallback error when override is set, got: {stderr}"
     );
 }
