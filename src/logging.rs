@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
 
-use crate::core::config::{resolve_envlock_home, RawEnv};
+use crate::core::config::{RawEnv, resolve_envlock_home};
 
 static CURRENT_LOG_FILE: OnceLock<PathBuf> = OnceLock::new();
 

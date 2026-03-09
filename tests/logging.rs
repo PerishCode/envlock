@@ -106,3 +106,91 @@ fn plugin_node_writes_per_invocation_log_file() {
     assert!(contents.contains("plugin.node resolve tool=node source=override"));
     assert!(contents.contains("plugin.node patch emitted env_count=8 symlink_count=4"));
 }
+
+#[test]
+fn plugin_node_failure_prints_log_path_and_writes_failure_trail() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let log_home = temp.path().join("logs");
+    let state_dir = temp.path().join("node-state");
+    let path_dir = temp.path().join("path-bin");
+    let npm_bin = temp.path().join("fake-npm.sh");
+    let pnpm_bin = temp.path().join("fake-pnpm.sh");
+    let yarn_bin = temp.path().join("fake-yarn.sh");
+
+    std::fs::create_dir_all(&path_dir).expect("path dir should be created");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("/bin/bash", path_dir.join("bash"))
+        .expect("bash symlink should be created");
+
+    std::fs::write(&npm_bin, "#!/usr/bin/env bash\necho 10.9.2\n")
+        .expect("fake npm should be written");
+    std::fs::write(&pnpm_bin, "#!/usr/bin/env bash\necho 10.30.3\n")
+        .expect("fake pnpm should be written");
+    std::fs::write(&yarn_bin, "#!/usr/bin/env bash\necho 1.22.22\n")
+        .expect("fake yarn should be written");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        for path in [&npm_bin, &pnpm_bin, &yarn_bin] {
+            let mut permissions = std::fs::metadata(path)
+                .expect("metadata should exist")
+                .permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(path, permissions).expect("permissions should be set");
+        }
+    }
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .env("ENVLOCK_LOG_HOME", &log_home)
+        .env("PATH", &path_dir)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    let preview = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "preview",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+            "--npm-bin",
+            npm_bin.to_str().unwrap(),
+            "--pnpm-bin",
+            pnpm_bin.to_str().unwrap(),
+            "--yarn-bin",
+            yarn_bin.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .env("ENVLOCK_LOG_HOME", &log_home)
+        .env("PATH", &path_dir)
+        .output()
+        .expect("preview command should run");
+    assert!(!preview.status.success());
+
+    let stderr = String::from_utf8(preview.stderr).expect("stderr should be valid UTF-8");
+    assert!(stderr.contains("See log:"));
+
+    let entries: Vec<_> = std::fs::read_dir(&log_home)
+        .expect("log dir should be readable")
+        .map(|entry| entry.expect("entry should be readable").path())
+        .collect();
+    let newest = entries
+        .iter()
+        .max_by_key(|path| std::fs::metadata(path).and_then(|m| m.modified()).ok())
+        .expect("at least one log file should exist");
+    let contents = std::fs::read_to_string(newest).expect("log file should be readable");
+    assert!(contents.contains("plugin invocation failed"));
+    assert!(contents.contains("plugin.node resolve tool=node source=path result=not_found"));
+    assert!(contents.contains("envlock invocation failed"));
+}

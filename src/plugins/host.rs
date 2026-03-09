@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 
-use crate::core::config::{resolve_envlock_home, RawEnv};
+use crate::core::config::{RawEnv, resolve_envlock_home};
 use crate::logging::current_log_file;
 
 use super::{builtin_plugin_script, patch::validate_patch_json};

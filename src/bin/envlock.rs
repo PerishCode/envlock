@@ -4,25 +4,25 @@ use std::process;
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use envlock::commands::alias::{
-    resolve_profile_for_alias, run_append as run_alias_append, run_list as run_alias_list,
-    AliasAppendOptions,
+    AliasAppendOptions, resolve_profile_for_alias, run_append as run_alias_append,
+    run_list as run_alias_list,
 };
-use envlock::commands::plugin::{run as run_plugin, PluginRunOptions};
-use envlock::commands::preview::{run as run_preview, PreviewOutputMode};
+use envlock::commands::plugin::{PluginRunOptions, run as run_plugin};
+use envlock::commands::preview::{PreviewOutputMode, run as run_preview};
 use envlock::commands::profiles::{
-    run_init as run_profiles_init, run_status as run_profiles_status, InitProfileType,
-    ProfilesInitOptions,
+    InitProfileType, ProfilesInitOptions, run_init as run_profiles_init,
+    run_status as run_profiles_status,
 };
-use envlock::commands::self_update::{run as run_self_update, SelfUpdateOptions};
-use envlock::commands::skill::{run_install as run_skill_install, SkillInstallOptions};
+use envlock::commands::self_update::{SelfUpdateOptions, run as run_self_update};
+use envlock::commands::skill::{SkillInstallOptions, run_install as run_skill_install};
 use envlock::core::app::App;
 use envlock::core::config::{
     CliInput, LogFormat as RuntimeLogFormat, OutputMode, RawEnv, RuntimeConfig,
 };
-use envlock::logging::{current_log_file, make_file_writer, prepare_session_log, SessionLog};
+use envlock::logging::{SessionLog, current_log_file, make_file_writer, prepare_session_log};
 use envlock::plugins::host::plugin_exit_code;
 use envlock::run;
-use tracing_subscriber::{prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -232,24 +232,13 @@ fn main() -> Result<()> {
                     yes: install.yes,
                 }),
             },
-            Commands::Plugin(args) => {
-                let result = run_plugin(PluginRunOptions {
-                    force_install: args.method == "init"
-                        && args.args.iter().any(|arg| arg == "--force"),
-                    plugin: args.plugin,
-                    method: args.method,
-                    args: args.args,
-                });
-                if let Err(error) = result {
-                    if let Some(code) = plugin_exit_code(&error) {
-                        eprintln!("{error}");
-                        process::exit(code);
-                    }
-                    Err(error)
-                } else {
-                    Ok(())
-                }
-            }
+            Commands::Plugin(args) => run_plugin(PluginRunOptions {
+                force_install: args.method == "init"
+                    && args.args.iter().any(|arg| arg == "--force"),
+                plugin: args.plugin,
+                method: args.method,
+                args: args.args,
+            }),
             Commands::External(tokens) => run_external_command(&tokens, &cli.run_args),
         };
         return finish_command(result);
