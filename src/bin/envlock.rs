@@ -182,7 +182,13 @@ struct RunArgs {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let raw_env = RawEnv::from_process();
-    let session_log = prepare_session_log(&raw_env, &command_slug(&cli)).ok();
+    let session_log = match prepare_session_log(&raw_env, &command_slug(&cli)) {
+        Ok(session_log) => Some(session_log),
+        Err(error) => {
+            eprintln!("Warning: session file logging disabled: {error}");
+            None
+        }
+    };
     init_logging(
         cli.run_args.log_level.into(),
         cli.run_args.log_format.into(),
@@ -428,15 +434,22 @@ fn init_logging(
     let registry = tracing_subscriber::registry().with(stderr_layer.with_filter(env_filter));
 
     if let Some(session_log) = session_log {
-        let writer = make_file_writer(session_log)?;
-        let file_layer = tracing_subscriber::fmt::layer()
-            .with_ansi(false)
-            .with_writer(move || writer.clone())
-            .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
-        registry
-            .with(file_layer)
-            .try_init()
-            .context("failed to initialize logger")?;
+        match make_file_writer(session_log) {
+            Ok(writer) => {
+                let file_layer = tracing_subscriber::fmt::layer()
+                    .with_ansi(false)
+                    .with_writer(move || writer.clone())
+                    .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
+                registry
+                    .with(file_layer)
+                    .try_init()
+                    .context("failed to initialize logger")?;
+            }
+            Err(error) => {
+                eprintln!("Warning: session file logging disabled: {error}");
+                registry.try_init().context("failed to initialize logger")?;
+            }
+        }
     } else {
         registry.try_init().context("failed to initialize logger")?;
     }

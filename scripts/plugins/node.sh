@@ -63,7 +63,25 @@ YARN_BIN_OVERRIDE="${YARN_BIN_ARG:-${ENVLOCK_PLUGIN_YARN_BIN:-}}"
 
 CURRENT_BIN_DIR="$STATE_DIR/current/bin"
 LOCK_DIR="$STATE_DIR/locks/apply.lock"
+LOCK_PID_FILE="$LOCK_DIR/pid"
 STATE_FILE="$STATE_DIR/state.v2.json"
+
+state_error() {
+  local action="$1"
+  local detail="${2:-unknown error}"
+  log_error "state action=$action state_dir=$STATE_DIR detail=$detail"
+  echo "failed to $action in state dir $STATE_DIR: $detail" >&2
+  exit 74
+}
+
+run_state_op() {
+  local action="$1"
+  shift
+  local output
+  if ! output="$("$@" 2>&1)"; then
+    state_error "$action" "$output"
+  fi
+}
 
 log_line() {
   local level="$1"
@@ -208,8 +226,90 @@ EOF
 }
 
 ensure_layout() {
-  mkdir -p "$CURRENT_BIN_DIR" "$STATE_DIR/locks"
+  run_state_op "prepare layout" mkdir -p "$CURRENT_BIN_DIR" "$STATE_DIR/locks"
   log_info "layout state_dir=$STATE_DIR current_bin=$CURRENT_BIN_DIR"
+}
+
+read_lock_pid() {
+  local pid=""
+  if ! pid="$(cat "$LOCK_PID_FILE" 2>/dev/null)"; then
+    return 1
+  fi
+  case "$pid" in
+    ''|*[!0-9]*)
+      return 1
+      ;;
+  esac
+  printf '%s' "$pid"
+}
+
+release_lock() {
+  log_info "lock released dir=$LOCK_DIR"
+  rm -f "$LOCK_PID_FILE" 2>/dev/null || true
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+
+recover_stale_lock() {
+  local pid=""
+
+  if pid="$(read_lock_pid)"; then
+    if kill -0 "$pid" 2>/dev/null; then
+      log_warn "lock busy dir=$LOCK_DIR pid=$pid"
+      return 1
+    fi
+    log_warn "lock stale dir=$LOCK_DIR pid=$pid"
+    rm -rf "$LOCK_DIR"
+    return 0
+  fi
+
+  sleep 1
+  if pid="$(read_lock_pid)"; then
+    if kill -0 "$pid" 2>/dev/null; then
+      log_warn "lock busy dir=$LOCK_DIR pid=$pid"
+      return 1
+    fi
+    log_warn "lock stale dir=$LOCK_DIR pid=$pid"
+    rm -rf "$LOCK_DIR"
+    return 0
+  fi
+
+  if rmdir "$LOCK_DIR" 2>/dev/null; then
+    log_warn "lock stale dir=$LOCK_DIR pid=missing"
+    return 0
+  fi
+
+  log_warn "lock busy dir=$LOCK_DIR pid=unknown"
+  return 1
+}
+
+acquire_lock() {
+  local lock_output=""
+
+  if lock_output="$(mkdir "$LOCK_DIR" 2>&1)"; then
+    :
+  elif [[ ! -e "$LOCK_DIR" ]]; then
+    state_error "create lock directory" "$lock_output"
+  else
+    recover_stale_lock || {
+      log_warn "lock rejected dir=$LOCK_DIR"
+      echo "node plugin apply is locked by another process" >&2
+      exit 73
+    }
+
+    if lock_output="$(mkdir "$LOCK_DIR" 2>&1)"; then
+      :
+    elif [[ -e "$LOCK_DIR" ]]; then
+      log_warn "lock rejected dir=$LOCK_DIR"
+      echo "node plugin apply is locked by another process" >&2
+      exit 73
+    else
+      state_error "create lock directory" "$lock_output"
+    fi
+  fi
+
+  printf '%s\n' "$$" > "$LOCK_PID_FILE"
+  log_info "lock acquired dir=$LOCK_DIR pid=$$"
+  trap 'release_lock' EXIT
 }
 
 empty_patch() {
@@ -244,6 +344,8 @@ emit_patch() {
     { "op": "set", "key": "PNPM_HOME", "value": "$(json_escape "$CURRENT_BIN_DIR")" },
     { "op": "set", "key": "npm_config_store_dir", "value": "$(json_escape "$(tool_cache_dir pnpm "$pnpm_version")/store")" },
     { "op": "set", "key": "YARN_CACHE_FOLDER", "value": "$(json_escape "$(tool_cache_dir yarn "$yarn_version")")" },
+    { "op": "set", "key": "YARN_GLOBAL_FOLDER", "value": "$(json_escape "$(tool_version_dir yarn "$yarn_version")/global")" },
+    { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$(tool_version_dir npm "$npm_version")/global/bin")", "separator": ":" },
     { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$CURRENT_BIN_DIR")", "separator": ":" }
   ],
   "symlink": [
@@ -254,7 +356,7 @@ emit_patch() {
   ]
 }
 EOF
-  log_info "patch emitted env_count=8 symlink_count=4"
+  log_info "patch emitted env_count=10 symlink_count=4"
 }
 
 resolve_all_tools() {
@@ -280,7 +382,7 @@ resolve_all_tools() {
 }
 
 prepare_version_dirs() {
-  mkdir -p \
+  run_state_op "prepare version directories" mkdir -p \
     "$(tool_version_dir node "$NODE_VERSION")/bin" \
     "$(tool_version_dir npm "$NPM_VERSION")/bin" \
     "$(tool_version_dir npm "$NPM_VERSION")/global" \
@@ -288,6 +390,7 @@ prepare_version_dirs() {
     "$(tool_version_dir npm "$NPM_VERSION")/global/lib/node_modules" \
     "$(tool_version_dir pnpm "$PNPM_VERSION")/bin" \
     "$(tool_version_dir yarn "$YARN_VERSION")/bin" \
+    "$(tool_version_dir yarn "$YARN_VERSION")/global" \
     "$(tool_cache_dir npm "$NPM_VERSION")" \
     "$(tool_cache_dir pnpm "$PNPM_VERSION")/store" \
     "$(tool_cache_dir yarn "$YARN_VERSION")"
@@ -295,15 +398,15 @@ prepare_version_dirs() {
 }
 
 link_versions() {
-  ln -sfn "$NODE_BIN" "$(tool_version_dir node "$NODE_VERSION")/bin/node"
-  ln -sfn "$NPM_BIN" "$(tool_version_dir npm "$NPM_VERSION")/bin/npm"
-  ln -sfn "$PNPM_BIN" "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm"
-  ln -sfn "$YARN_BIN" "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn"
+  run_state_op "link node version" ln -sfn "$NODE_BIN" "$(tool_version_dir node "$NODE_VERSION")/bin/node"
+  run_state_op "link npm version" ln -sfn "$NPM_BIN" "$(tool_version_dir npm "$NPM_VERSION")/bin/npm"
+  run_state_op "link pnpm version" ln -sfn "$PNPM_BIN" "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm"
+  run_state_op "link yarn version" ln -sfn "$YARN_BIN" "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn"
 
-  ln -sfn "$(tool_version_dir node "$NODE_VERSION")/bin/node" "$CURRENT_BIN_DIR/node"
-  ln -sfn "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$CURRENT_BIN_DIR/npm"
-  ln -sfn "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm" "$CURRENT_BIN_DIR/pnpm"
-  ln -sfn "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn" "$CURRENT_BIN_DIR/yarn"
+  run_state_op "refresh current node link" ln -sfn "$(tool_version_dir node "$NODE_VERSION")/bin/node" "$CURRENT_BIN_DIR/node"
+  run_state_op "refresh current npm link" ln -sfn "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$CURRENT_BIN_DIR/npm"
+  run_state_op "refresh current pnpm link" ln -sfn "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm" "$CURRENT_BIN_DIR/pnpm"
+  run_state_op "refresh current yarn link" ln -sfn "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn" "$CURRENT_BIN_DIR/yarn"
   log_info "symlinks refreshed current_bin=$CURRENT_BIN_DIR"
 }
 
@@ -323,13 +426,7 @@ do_validate_or_preview() {
 
 do_apply() {
   ensure_layout
-  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    log_warn "lock rejected dir=$LOCK_DIR"
-    echo "node plugin apply is locked by another process" >&2
-    exit 73
-  fi
-  log_info "lock acquired dir=$LOCK_DIR"
-  trap 'log_info "lock released dir=$LOCK_DIR"; rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+  acquire_lock
 
   resolve_all_tools
   prepare_version_dirs

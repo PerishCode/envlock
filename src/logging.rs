@@ -57,7 +57,6 @@ pub fn prepare_session_log(raw_env: &RawEnv, command_slug: &str) -> Result<Sessi
     let pid = std::process::id();
     let slug = sanitize_slug(command_slug);
     let file_path = log_root.join(format!("{}-{}-{}.log", timestamp, pid, slug));
-    CURRENT_LOG_FILE.get_or_init(|| file_path.clone());
     Ok(SessionLog { file_path })
 }
 
@@ -72,6 +71,7 @@ pub fn make_file_writer(session_log: &SessionLog) -> Result<SharedFileWriter> {
                 session_log.file_path().display()
             )
         })?;
+    let _ = CURRENT_LOG_FILE.set(session_log.file_path().to_path_buf());
     Ok(SharedFileWriter(Arc::new(Mutex::new(file))))
 }
 

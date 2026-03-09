@@ -16,6 +16,26 @@ fn write_fake_tool(path: &std::path::Path, version: &str) {
     }
 }
 
+fn write_slow_fake_tool(path: &std::path::Path, version: &str, delay_seconds: u64) {
+    std::fs::write(
+        path,
+        format!(
+            "#!/usr/bin/env bash\nsleep {}\necho {}\n",
+            delay_seconds, version
+        ),
+    )
+    .expect("slow fake tool script should be written");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = std::fs::metadata(path)
+            .expect("slow fake tool metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(path, permissions).expect("slow fake tool should be executable");
+    }
+}
+
 fn write_path_bound_manager(path: &std::path::Path, version: &str) {
     std::fs::write(
         path,
@@ -114,6 +134,8 @@ fn plugin_node_preview_and_apply_emit_patch() {
     assert!(stdout.contains("\"ENVLOCK_NODE_BIN\""));
     assert!(stdout.contains("\"npm_config_store_dir\""));
     assert!(stdout.contains("\"YARN_CACHE_FOLDER\""));
+    assert!(stdout.contains("\"YARN_GLOBAL_FOLDER\""));
+    assert!(stdout.contains("global/bin"));
 
     let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
         .args([
@@ -143,11 +165,14 @@ fn plugin_node_preview_and_apply_emit_patch() {
     assert!(state_dir.join("versions/node/v24.12.0/bin/node").exists());
     assert!(state_dir.join("versions/npm/v10.9.2/bin/npm").exists());
     assert!(state_dir.join("versions/npm/v10.9.2/global/bin").is_dir());
-    assert!(state_dir
-        .join("versions/npm/v10.9.2/global/lib/node_modules")
-        .is_dir());
+    assert!(
+        state_dir
+            .join("versions/npm/v10.9.2/global/lib/node_modules")
+            .is_dir()
+    );
     assert!(state_dir.join("versions/pnpm/v10.30.3/bin/pnpm").exists());
     assert!(state_dir.join("versions/yarn/v1.22.22/bin/yarn").exists());
+    assert!(state_dir.join("versions/yarn/v1.22.22/global").is_dir());
     assert!(state_dir.join("state.v2.json").is_file());
 }
 
@@ -495,4 +520,236 @@ fn plugin_node_failure_propagates_plugin_exit_code() {
     assert_eq!(apply.status.code(), Some(73));
     let stderr = String::from_utf8(apply.stderr).expect("stderr should be UTF-8");
     assert!(stderr.contains("exit code 73"));
+}
+
+#[test]
+#[cfg(unix)]
+fn plugin_node_apply_reports_read_only_state_dir_as_permission_error() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let node_bin = temp.path().join("fake-node.sh");
+    let npm_bin = temp.path().join("fake-npm.sh");
+    let pnpm_bin = temp.path().join("fake-pnpm.sh");
+    let yarn_bin = temp.path().join("fake-yarn.sh");
+
+    write_fake_tool(&node_bin, "v24.12.0");
+    write_fake_tool(&npm_bin, "10.9.2");
+    write_fake_tool(&pnpm_bin, "10.30.3");
+    write_fake_tool(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    for path in [
+        &state_dir,
+        &state_dir.join("current"),
+        &state_dir.join("current/bin"),
+        &state_dir.join("locks"),
+    ] {
+        let mut permissions = std::fs::metadata(path)
+            .expect("state path metadata should exist")
+            .permissions();
+        permissions.set_mode(0o555);
+        std::fs::set_permissions(path, permissions).expect("state path should become read-only");
+    }
+
+    let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+            "--node-bin",
+            node_bin.to_str().unwrap(),
+            "--npm-bin",
+            npm_bin.to_str().unwrap(),
+            "--pnpm-bin",
+            pnpm_bin.to_str().unwrap(),
+            "--yarn-bin",
+            yarn_bin.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("apply command should run");
+
+    assert_eq!(apply.status.code(), Some(74));
+    let stderr = String::from_utf8(apply.stderr).expect("stderr should be UTF-8");
+    assert!(stderr.contains("failed to create lock directory in state dir"));
+    assert!(stderr.contains("Permission denied"));
+    assert!(!stderr.contains("locked by another process"));
+}
+
+#[test]
+fn plugin_node_apply_recovers_from_stale_lock_dir() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let node_bin = temp.path().join("fake-node.sh");
+    let npm_bin = temp.path().join("fake-npm.sh");
+    let pnpm_bin = temp.path().join("fake-pnpm.sh");
+    let yarn_bin = temp.path().join("fake-yarn.sh");
+
+    write_fake_tool(&node_bin, "v24.12.0");
+    write_fake_tool(&npm_bin, "10.9.2");
+    write_fake_tool(&pnpm_bin, "10.30.3");
+    write_fake_tool(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    std::fs::create_dir_all(state_dir.join("locks/apply.lock"))
+        .expect("stale lock dir should be created");
+
+    let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+            "--node-bin",
+            node_bin.to_str().expect("node bin path should be UTF-8"),
+            "--npm-bin",
+            npm_bin.to_str().expect("npm bin path should be UTF-8"),
+            "--pnpm-bin",
+            pnpm_bin.to_str().expect("pnpm bin path should be UTF-8"),
+            "--yarn-bin",
+            yarn_bin.to_str().expect("yarn bin path should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("apply command should run");
+
+    assert!(
+        apply.status.success(),
+        "apply should recover from stale lock dir, stderr: {}",
+        String::from_utf8_lossy(&apply.stderr)
+    );
+    assert!(state_dir.join("state.v2.json").is_file());
+    assert!(!state_dir.join("locks/apply.lock").exists());
+}
+
+#[test]
+fn plugin_node_apply_recovers_after_interrupted_apply() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let node_bin = temp.path().join("slow-node.sh");
+    let npm_bin = temp.path().join("fake-npm.sh");
+    let pnpm_bin = temp.path().join("fake-pnpm.sh");
+    let yarn_bin = temp.path().join("fake-yarn.sh");
+
+    write_slow_fake_tool(&node_bin, "v24.12.0", 5);
+    write_fake_tool(&npm_bin, "10.9.2");
+    write_fake_tool(&pnpm_bin, "10.30.3");
+    write_fake_tool(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    let mut apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+            "--node-bin",
+            node_bin.to_str().expect("node bin path should be UTF-8"),
+            "--npm-bin",
+            npm_bin.to_str().expect("npm bin path should be UTF-8"),
+            "--pnpm-bin",
+            pnpm_bin.to_str().expect("pnpm bin path should be UTF-8"),
+            "--yarn-bin",
+            yarn_bin.to_str().expect("yarn bin path should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .spawn()
+        .expect("apply command should spawn");
+
+    let lock_pid_file = state_dir.join("locks/apply.lock/pid");
+    let mut observed_lock_pid = None;
+    for _ in 0..100 {
+        if let Ok(pid) = std::fs::read_to_string(&lock_pid_file) {
+            observed_lock_pid = Some(pid.trim().to_owned());
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+
+    let lock_pid = observed_lock_pid.expect("lock pid file should appear");
+    let kill_status = Command::new("kill")
+        .args(["-9", lock_pid.as_str()])
+        .status()
+        .expect("kill should run");
+    assert!(kill_status.success(), "kill -9 should succeed");
+
+    let interrupted = apply.wait().expect("interrupted apply should exit");
+    assert!(!interrupted.success(), "interrupted apply should fail");
+    assert!(state_dir.join("locks/apply.lock").exists());
+    assert!(!state_dir.join("state.v2.json").exists());
+
+    write_fake_tool(&node_bin, "v24.12.0");
+
+    let retry = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().expect("state dir should be UTF-8"),
+            "--node-bin",
+            node_bin.to_str().expect("node bin path should be UTF-8"),
+            "--npm-bin",
+            npm_bin.to_str().expect("npm bin path should be UTF-8"),
+            "--pnpm-bin",
+            pnpm_bin.to_str().expect("pnpm bin path should be UTF-8"),
+            "--yarn-bin",
+            yarn_bin.to_str().expect("yarn bin path should be UTF-8"),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("retry apply should run");
+
+    assert!(
+        retry.status.success(),
+        "retry should recover from interrupted apply, stderr: {}",
+        String::from_utf8_lossy(&retry.stderr)
+    );
+    assert!(state_dir.join("state.v2.json").is_file());
+    assert!(!state_dir.join("locks/apply.lock").exists());
 }
