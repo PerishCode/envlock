@@ -198,7 +198,9 @@ fn plugin_node_preview_and_apply_emit_patch() {
     assert!(stdout.contains("\"schema\": \"envlock.patch.v1\""));
     assert!(stdout.contains("\"ENVLOCK_NODE_BIN\""));
     assert!(stdout.contains("\"YARN_CACHE_FOLDER\""));
+    assert!(stdout.contains("\"YARN_GLOBAL_FOLDER\""));
     assert!(stdout.contains("global/bin"));
+    assert!(stdout.contains("global/node_modules/.bin"));
 
     let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
         .args([

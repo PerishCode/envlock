@@ -238,7 +238,10 @@ export PATH=$(shell_quote "$node_dir:$CURRENT_BIN_DIR:$npm_global_bin")\${PATH:+
 runtime_version="\$($(shell_quote "$real_bin") --version 2>/dev/null)"
 runtime_version="\$(normalize_version "\$runtime_version")"
 store_dir=$(shell_quote "$STATE_DIR")/cache/pnpm/v\${runtime_version}/store
+home_dir=$(shell_quote "$STATE_DIR")/homes/pnpm/v\${runtime_version}
 mkdir -p "\$store_dir"
+mkdir -p "\$home_dir"
+export HOME="\$home_dir"
 export PNPM_HOME=$(shell_quote "$CURRENT_BIN_DIR")
 export npm_config_store_dir="\$store_dir"
 exec $(shell_quote "$real_bin") "\$@"
@@ -258,7 +261,9 @@ runtime_version="\$($(shell_quote "$real_bin") --version 2>/dev/null)"
 runtime_version="\$(normalize_version "\$runtime_version")"
 cache_dir=$(shell_quote "$STATE_DIR")/cache/yarn/v\${runtime_version}
 global_dir=$(shell_quote "$STATE_DIR")/versions/yarn/v\${runtime_version}/global
-mkdir -p "\$cache_dir" "\$global_dir"
+home_dir=$(shell_quote "$STATE_DIR")/homes/yarn/v\${runtime_version}
+mkdir -p "\$cache_dir" "\$global_dir" "\$home_dir"
+export HOME="\$home_dir"
 export YARN_CACHE_FOLDER="\$cache_dir"
 export YARN_GLOBAL_FOLDER="\$global_dir"
 export PREFIX=$(shell_quote "$npm_prefix")
@@ -419,7 +424,9 @@ emit_patch() {
     { "op": "set", "key": "NPM_CONFIG_PREFIX", "value": "$(json_escape "$(tool_version_dir npm "$npm_version")/global")" },
     { "op": "set", "key": "PNPM_HOME", "value": "$(json_escape "$CURRENT_BIN_DIR")" },
     { "op": "set", "key": "YARN_CACHE_FOLDER", "value": "$(json_escape "$(tool_cache_dir yarn "$yarn_version")")" },
+    { "op": "set", "key": "YARN_GLOBAL_FOLDER", "value": "$(json_escape "$(tool_version_dir yarn "$yarn_version")/global")" },
     { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$(tool_version_dir npm "$npm_version")/global/bin")", "separator": ":" },
+    { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$(tool_version_dir yarn "$yarn_version")/global/node_modules/.bin")", "separator": ":" },
     { "op": "prepend_path", "key": "PATH", "value": "$(json_escape "$CURRENT_BIN_DIR")", "separator": ":" }
   ],
   "symlink": [
@@ -430,7 +437,7 @@ emit_patch() {
   ]
 }
 EOF
-  log_info "patch emitted env_count=8 symlink_count=4"
+  log_info "patch emitted env_count=9 symlink_count=4"
 }
 
 resolve_all_tools() {

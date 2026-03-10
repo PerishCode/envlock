@@ -104,7 +104,7 @@ fn plugin_node_writes_per_invocation_log_file() {
     let contents = std::fs::read_to_string(newest).expect("log file should be readable");
     assert!(contents.contains("plugin command prepared"));
     assert!(contents.contains("plugin.node resolve tool=node source=override"));
-    assert!(contents.contains("plugin.node patch emitted env_count=8 symlink_count=4"));
+    assert!(contents.contains("plugin.node patch emitted env_count=9 symlink_count=4"));
 }
 
 #[test]
