@@ -107,6 +107,10 @@ json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+shell_quote() {
+  printf '%q' "$1"
+}
+
 normalize_version() {
   local raw="$1"
   raw="${raw#v}"
@@ -182,7 +186,7 @@ resolve_tool_version() {
   if [[ -n "${NODE_BIN:-}" ]]; then
     node_bin_dir="$(dirname "$NODE_BIN")"
   fi
-  if ! raw="$(PATH="${node_bin_dir}${node_bin_dir:+:}$PATH" "$bin" --version 2>/dev/null)"; then
+  if ! raw="$(cd "$STATE_DIR" && PATH="${node_bin_dir}${node_bin_dir:+:}$PATH" "$bin" --version 2>/dev/null)"; then
     return 1
   fi
   log_info "version bin=$bin raw=$raw"
@@ -202,20 +206,70 @@ tool_cache_dir() {
 }
 
 write_wrapper() {
-  local path="$1"
-  local real_bin="$2"
-  local extra_env="$3"
+  local tool="$1"
+  local path="$2"
+  local real_bin="$3"
   local node_dir="$(tool_version_dir node "$NODE_VERSION")/bin"
   local npm_global_bin="$(tool_version_dir npm "$NPM_VERSION")/global/bin"
+  local npm_prefix="$(tool_version_dir npm "$NPM_VERSION")/global"
 
   run_state_op "prepare wrapper dir" mkdir -p "$(dirname "$path")"
-  cat > "$path" <<EOF
+  case "$tool" in
+    npm)
+      cat > "$path" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-export PATH="$(json_escape "$node_dir"):$(json_escape "$CURRENT_BIN_DIR"):$(json_escape "$npm_global_bin")\${PATH:+:\$PATH}"
-$extra_env
-exec "$(json_escape "$real_bin")" "\$@"
+export PATH=$(shell_quote "$node_dir:$CURRENT_BIN_DIR:$npm_global_bin")\${PATH:+:\$PATH}
+export NPM_CONFIG_CACHE=$(shell_quote "$(tool_cache_dir npm "$NPM_VERSION")")
+export NPM_CONFIG_PREFIX=$(shell_quote "$npm_prefix")
+exec $(shell_quote "$real_bin") "\$@"
 EOF
+      ;;
+    pnpm)
+      cat > "$path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+normalize_version() {
+  local raw="\$1"
+  raw="\${raw#v}"
+  printf '%s' "\$raw"
+}
+export PATH=$(shell_quote "$node_dir:$CURRENT_BIN_DIR:$npm_global_bin")\${PATH:+:\$PATH}
+runtime_version="\$($(shell_quote "$real_bin") --version 2>/dev/null)"
+runtime_version="\$(normalize_version "\$runtime_version")"
+store_dir=$(shell_quote "$STATE_DIR")/cache/pnpm/v\${runtime_version}/store
+mkdir -p "\$store_dir"
+export PNPM_HOME=$(shell_quote "$CURRENT_BIN_DIR")
+export npm_config_store_dir="\$store_dir"
+exec $(shell_quote "$real_bin") "\$@"
+EOF
+      ;;
+    yarn)
+      cat > "$path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+normalize_version() {
+  local raw="\$1"
+  raw="\${raw#v}"
+  printf '%s' "\$raw"
+}
+export PATH=$(shell_quote "$node_dir:$CURRENT_BIN_DIR:$npm_global_bin")\${PATH:+:\$PATH}
+runtime_version="\$($(shell_quote "$real_bin") --version 2>/dev/null)"
+runtime_version="\$(normalize_version "\$runtime_version")"
+cache_dir=$(shell_quote "$STATE_DIR")/cache/yarn/v\${runtime_version}
+global_dir=$(shell_quote "$STATE_DIR")/versions/yarn/v\${runtime_version}/global
+mkdir -p "\$cache_dir" "\$global_dir"
+export YARN_CACHE_FOLDER="\$cache_dir"
+export YARN_GLOBAL_FOLDER="\$global_dir"
+export PREFIX=$(shell_quote "$npm_prefix")
+export npm_config_prefix=$(shell_quote "$npm_prefix")
+exec $(shell_quote "$real_bin") "\$@"
+EOF
+      ;;
+    *)
+      state_error "write wrapper" "unsupported tool $tool"
+      ;;
+  esac
   run_state_op "set wrapper executable" chmod 755 "$path"
 }
 
@@ -424,9 +478,9 @@ link_versions() {
   local yarn_global_dir="$(tool_version_dir yarn "$YARN_VERSION")/global"
 
   run_state_op "link node version" ln -sfn "$NODE_BIN" "$(tool_version_dir node "$NODE_VERSION")/bin/node"
-  write_wrapper "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$NPM_BIN" "export NPM_CONFIG_CACHE=\"$(json_escape "$(tool_cache_dir npm "$NPM_VERSION")")\"; export NPM_CONFIG_PREFIX=\"$(json_escape "$npm_prefix")\""
-  write_wrapper "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm" "$PNPM_BIN" "export PNPM_HOME=\"$(json_escape "$CURRENT_BIN_DIR")\"; export npm_config_store_dir=\"$(json_escape "$pnpm_store_dir")\""
-  write_wrapper "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn" "$YARN_BIN" "export YARN_CACHE_FOLDER=\"$(json_escape "$yarn_cache_dir")\"; export YARN_GLOBAL_FOLDER=\"$(json_escape "$yarn_global_dir")\"; export PREFIX=\"$(json_escape "$npm_prefix")\"; export npm_config_prefix=\"$(json_escape "$npm_prefix")\""
+  write_wrapper npm "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$NPM_BIN"
+  write_wrapper pnpm "$(tool_version_dir pnpm "$PNPM_VERSION")/bin/pnpm" "$PNPM_BIN"
+  write_wrapper yarn "$(tool_version_dir yarn "$YARN_VERSION")/bin/yarn" "$YARN_BIN"
 
   run_state_op "refresh current node link" ln -sfn "$(tool_version_dir node "$NODE_VERSION")/bin/node" "$CURRENT_BIN_DIR/node"
   run_state_op "refresh current npm link" ln -sfn "$(tool_version_dir npm "$NPM_VERSION")/bin/npm" "$CURRENT_BIN_DIR/npm"

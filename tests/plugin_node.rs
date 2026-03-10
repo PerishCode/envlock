@@ -57,6 +57,71 @@ fn write_path_bound_manager(path: &std::path::Path, version: &str) {
     }
 }
 
+fn write_project_aware_pnpm(path: &std::path::Path, default_version: &str, project_version: &str) {
+    std::fs::write(
+        path,
+        format!(
+            "#!/usr/bin/env bash
+version={default_version}
+if [[ -f package.json ]]; then
+  version={project_version}
+fi
+case \"${{1:-}}\" in
+  --version)
+    printf '%s\\n' \"$version\"
+    ;;
+  store)
+    if [[ \"${{2:-}}\" == path ]]; then
+      printf '%s/v10\\n' \"${{npm_config_store_dir:-unset}}\"
+    else
+      exit 1
+    fi
+    ;;
+  *)
+    printf '%s\\n' \"$version\"
+    ;;
+esac
+"
+        ),
+    )
+    .expect("project-aware pnpm should be written");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = std::fs::metadata(path)
+            .expect("project-aware pnpm metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(path, permissions)
+            .expect("project-aware pnpm should be executable");
+    }
+}
+
+fn write_project_sensitive_yarn(path: &std::path::Path, default_version: &str) {
+    std::fs::write(
+        path,
+        format!(
+            "#!/usr/bin/env bash
+if [[ -f package.json && \"${{1:-}}\" == --version ]]; then
+  exit 1
+fi
+printf '%s\\n' {default_version}
+"
+        ),
+    )
+    .expect("project-sensitive yarn should be written");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = std::fs::metadata(path)
+            .expect("project-sensitive yarn metadata should exist")
+            .permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(path, permissions)
+            .expect("project-sensitive yarn should be executable");
+    }
+}
+
 #[test]
 fn plugin_node_init_creates_embedded_script() {
     let temp = TempDir::new().expect("temp dir should be created");
@@ -234,6 +299,146 @@ fn plugin_node_apply_uses_selected_node_for_manager_version_resolution() {
     assert!(state.contains("\"version\": \"10.8.2\""));
     assert!(state.contains("\"version\": \"10.30.3\""));
     assert!(state.contains("\"version\": \"1.22.22\""));
+}
+
+#[test]
+fn plugin_node_apply_ignores_project_package_manager_during_version_probe() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let project_dir = temp.path().join("project");
+    let node_bin = temp.path().join("node.sh");
+    let npm_bin = temp.path().join("npm.sh");
+    let pnpm_bin = temp.path().join("pnpm.sh");
+    let yarn_bin = temp.path().join("yarn.sh");
+
+    std::fs::create_dir_all(&project_dir).expect("project dir should be created");
+    std::fs::write(
+        project_dir.join("package.json"),
+        "{\"packageManager\":\"pnpm@10.32.0\"}",
+    )
+    .expect("package json should be written");
+    write_fake_tool(&node_bin, "v22.12.0");
+    write_fake_tool(&npm_bin, "11.6.2");
+    write_project_aware_pnpm(&pnpm_bin, "10.30.3", "10.32.0");
+    write_project_sensitive_yarn(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .current_dir(&project_dir)
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+            "--node-bin",
+            node_bin.to_str().unwrap(),
+            "--npm-bin",
+            npm_bin.to_str().unwrap(),
+            "--pnpm-bin",
+            pnpm_bin.to_str().unwrap(),
+            "--yarn-bin",
+            yarn_bin.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .env("PROJECT_DIR", &project_dir)
+        .output()
+        .expect("apply command should run");
+
+    assert!(
+        apply.status.success(),
+        "apply should succeed outside project manager version noise, stderr: {}",
+        String::from_utf8_lossy(&apply.stderr)
+    );
+    let state =
+        std::fs::read_to_string(state_dir.join("state.v2.json")).expect("state should exist");
+    assert!(state.contains("\"version\": \"10.30.3\""));
+    assert!(state.contains("\"version\": \"1.22.22\""));
+}
+
+#[test]
+fn plugin_node_pnpm_wrapper_uses_runtime_project_version_for_store_dir() {
+    let temp = TempDir::new().expect("temp dir should be created");
+    let envlock_home = temp.path().join("envlock-home");
+    let state_dir = temp.path().join("node-state");
+    let project_dir = temp.path().join("project");
+    let node_bin = temp.path().join("node.sh");
+    let npm_bin = temp.path().join("npm.sh");
+    let pnpm_bin = temp.path().join("pnpm.sh");
+    let yarn_bin = temp.path().join("yarn.sh");
+
+    std::fs::create_dir_all(&project_dir).expect("project dir should be created");
+    std::fs::write(
+        project_dir.join("package.json"),
+        "{\"packageManager\":\"pnpm@10.32.0\"}",
+    )
+    .expect("package json should be written");
+    write_fake_tool(&node_bin, "v22.12.0");
+    write_fake_tool(&npm_bin, "11.6.2");
+    write_project_aware_pnpm(&pnpm_bin, "10.30.3", "10.32.0");
+    write_fake_tool(&yarn_bin, "1.22.22");
+
+    let init = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "init",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .output()
+        .expect("init command should run");
+    assert!(init.status.success());
+
+    let apply = Command::new(env!("CARGO_BIN_EXE_envlock"))
+        .args([
+            "plugin",
+            "node",
+            "apply",
+            "--state-dir",
+            state_dir.to_str().unwrap(),
+            "--node-bin",
+            node_bin.to_str().unwrap(),
+            "--npm-bin",
+            npm_bin.to_str().unwrap(),
+            "--pnpm-bin",
+            pnpm_bin.to_str().unwrap(),
+            "--yarn-bin",
+            yarn_bin.to_str().unwrap(),
+        ])
+        .env("ENVLOCK_HOME", &envlock_home)
+        .env("PROJECT_DIR", &project_dir)
+        .output()
+        .expect("apply command should run");
+    assert!(apply.status.success());
+
+    let store = Command::new(state_dir.join("current/bin/pnpm"))
+        .current_dir(&project_dir)
+        .arg("store")
+        .arg("path")
+        .env("PROJECT_DIR", &project_dir)
+        .output()
+        .expect("pnpm wrapper should run");
+    assert!(store.status.success());
+    let stdout = String::from_utf8(store.stdout).expect("stdout should be UTF-8");
+    assert!(
+        stdout.contains("cache/pnpm/v10.32.0/store"),
+        "unexpected pnpm store path: {stdout}"
+    );
 }
 
 #[test]
